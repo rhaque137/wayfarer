@@ -1,0 +1,620 @@
+"use client";
+
+import { useEffect, useRef, useCallback, useState } from "react";
+import mapboxgl from "mapbox-gl";
+import { useTripStore } from "@/store/tripStore";
+import { PanelHeader } from "@/components/ui/PanelHeader";
+
+const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
+const NAVY = "#040710";
+const DAY_COLORS = [
+  "#00E5FF", // Day 1 — cyan
+  "#FF6B6B", // Day 2 — coral
+  "#51CF66", // Day 3 — green
+  "#FFD43B", // Day 4 — yellow
+  "#CC5DE8", // Day 5 — purple
+  "#FF922B", // Day 6 — orange
+  "#74C0FC", // Day 7 — sky blue
+  "#F06595", // Day 8 — pink
+];
+
+// ── Custom dark-glass zoom control ──────────────────────────────────────────
+class DarkZoomControl implements mapboxgl.IControl {
+  private container!: HTMLDivElement;
+  private map!: mapboxgl.Map;
+
+  onAdd(map: mapboxgl.Map) {
+    this.map = map;
+    this.container = document.createElement("div");
+    this.container.style.cssText = `
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 10;
+    `;
+
+    const btn = (label: string, onClick: () => void) => {
+      const b = document.createElement("button");
+      b.textContent = label;
+      b.style.cssText = `
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: rgba(10,14,26,0.85);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(0,229,255,0.18);
+        color: ${DAY_COLORS[0]};
+        font-size: 18px;
+        line-height: 1;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s;
+      `;
+      b.addEventListener("mouseenter", () => {
+        b.style.background = "rgba(0,229,255,0.12)";
+      });
+      b.addEventListener("mouseleave", () => {
+        b.style.background = "rgba(10,14,26,0.85)";
+      });
+      b.addEventListener("click", onClick);
+      return b;
+    };
+
+    this.container.appendChild(btn("+", () => this.map.zoomIn()));
+    this.container.appendChild(btn("−", () => this.map.zoomOut()));
+    return this.container;
+  }
+
+  onRemove() {
+    this.container.remove();
+  }
+}
+
+// ── Component ────────────────────────────────────────────────────────────────
+export function MapPanel({
+  isCollapsed = false,
+  onToggle,
+}: {
+  isCollapsed?: boolean;
+  onToggle?: () => void;
+}) {
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
+  const popupsRef = useRef<Map<string, mapboxgl.Popup>>(new Map());
+  const renderIdRef = useRef(0);
+  const locationsRef = useRef<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+  const { trip, activeActivityId, setActiveActivityId } = useTripStore();
+  const selectIndex = useCallback(
+    (idx: number | null) => {
+      if (idx == null) {
+        setSelectedIndex(null);
+        setActiveActivityId(null);
+        return;
+      }
+      setSelectedIndex(idx);
+      const loc = locationsRef.current[idx];
+      if (loc?.id) setActiveActivityId(loc.id);
+    },
+    [setActiveActivityId]
+  );
+  const selectById = useCallback(
+    (id: string | null | undefined) => {
+      if (!id) return selectIndex(null);
+      const idx = locationsRef.current.findIndex((l) => l.id === id);
+      if (idx === -1) return;
+      selectIndex(idx);
+    },
+    [selectIndex]
+  );
+
+  if (isCollapsed) {
+    return <PanelHeader icon="🗺" label="Map" isCollapsed onToggle={onToggle} />;
+  }
+
+  // ── Init / teardown map ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (isCollapsed) {
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
+      return;
+    }
+    if (map.current || !mapContainer.current || !TOKEN) return;
+
+    mapboxgl.accessToken = TOKEN;
+
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: "mapbox://styles/mapbox/navigation-night-v1",
+      center: [0, 20],
+      zoom: 1.8,
+      attributionControl: false,
+    });
+
+    map.current.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
+    map.current.addControl(new DarkZoomControl());
+    map.current.on("load", () => map.current?.resize());
+
+    return () => {
+      map.current?.remove();
+      map.current = null;
+    };
+  }, [isCollapsed]);
+
+  // ── Markers helper ───────────────────────────────────────────────────────
+  const clearMarkers = useCallback(() => {
+    markersRef.current.forEach((m) => m.remove());
+    popupsRef.current.forEach((p) => p.remove());
+    markersRef.current.clear();
+    popupsRef.current.clear();
+  }, []);
+
+  // ── Rebuild markers when trip changes ────────────────────────────────────
+  useEffect(() => {
+    if (isCollapsed) return;
+    if (!map.current || !trip) return;
+    const renderId = ++renderIdRef.current;
+
+    clearMarkers();
+
+    const activitiesRaw = trip.days
+      .flatMap((d, dayIdx) =>
+        d.activities.map((act, actIdx) => ({
+          ...act,
+          _dayIdx: dayIdx,
+          _actIdx: actIdx,
+        })),
+      )
+      .map((a) => normalizeCoords(a))
+      .filter((a) => a.lat != null && a.lng != null);
+    const activitiesDeduped = dedupeActivities(activitiesRaw);
+    if (activitiesDeduped.length === 0) return;
+
+    const applyMarkers = (activities: typeof activitiesRaw) => {
+      if (renderId !== renderIdRef.current) return;
+      clearMarkers();
+      locationsRef.current = activities;
+      setLocations(activities);
+      if (activities.length === 0) return;
+
+      // Fly to destination at zoom 11
+      map.current!.flyTo({
+        center: [activities[0].lng!, activities[0].lat!],
+        zoom: 11,
+        duration: 2400,
+        essential: true,
+      });
+
+      // Fit all markers after initial fly completes
+      if (activities.length > 1) {
+        map.current!.once("moveend", () => {
+          if (!map.current) return;
+          const bounds = new mapboxgl.LngLatBounds();
+          activities.forEach((a) => bounds.extend([a.lng!, a.lat!]));
+          map.current.fitBounds(bounds, { padding: 64, maxZoom: 13, duration: 1000 });
+        });
+      }
+
+      activities.forEach((act, i) => {
+        const pinColor = DAY_COLORS[act._dayIdx % DAY_COLORS.length];
+      // ── Marker element ──
+      const el = document.createElement("div");
+      el.dataset.id = act.id;
+      el.dataset.color = pinColor;
+      el.style.cssText = `
+        width: 28px;
+        height: 36px;
+        cursor: pointer;
+        position: relative;
+        filter: drop-shadow(0 2px 8px rgba(0,0,0,0.4));
+        transition: filter 0.15s ease;
+      `;
+      el.innerHTML = `<div class="wayfarer-pin-inner" style="transition: transform 0.15s ease; transform-origin: 50% 100%;">
+        <svg width="28" height="36" viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22s14-12.667 14-22C28 6.268 21.732 0 14 0z" fill="${pinColor}"/>
+          <text x="14" y="17" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="12" font-weight="800" font-family="Inter, sans-serif">${i + 1}</text>
+        </svg>
+      </div>`;
+
+      // Hover tooltip (name only)
+      const popup = new mapboxgl.Popup({
+        offset: 18,
+        closeButton: false,
+        closeOnClick: false,
+        maxWidth: "220px",
+        className: "wayfarer-tooltip",
+      }).setHTML(`<div class="tooltip-name">${act.name}</div>`);
+
+      // Show popup on hover
+      el.addEventListener("mouseenter", () => {
+        popup.setLngLat([act.lng!, act.lat!]).addTo(map.current!);
+        if (useTripStore.getState().activeActivityId !== act.id) {
+          const inner = el.querySelector(".wayfarer-pin-inner") as HTMLDivElement | null;
+          if (inner) inner.style.transform = "scale(1.12)";
+        }
+      });
+      el.addEventListener("mouseleave", () => {
+        popup.remove();
+        if (useTripStore.getState().activeActivityId !== act.id) {
+          const inner = el.querySelector(".wayfarer-pin-inner") as HTMLDivElement | null;
+          if (inner) inner.style.transform = "scale(1)";
+        }
+      });
+
+      // Click → highlight itinerary card + open detail panel
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        selectById(act.id);
+        document.getElementById(`activity-${act.id}`)?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      });
+
+      const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
+        .setLngLat([act.lng!, act.lat!])
+        .addTo(map.current!);
+
+        const ids = Array.isArray((act as any)._groupIds) ? (act as any)._groupIds : [act.id];
+        ids.forEach((id: string) => {
+          markersRef.current.set(id, marker);
+          popupsRef.current.set(id, popup);
+        });
+      });
+    };
+
+    async function geocodeActivities(base: typeof activitiesRaw, destination: string) {
+      const results = await Promise.all(
+        base.map(async (act) => {
+          try {
+            const query = `${act.name} ${destination}`.trim();
+            const res = await fetch(
+              `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+                query,
+              )}.json?access_token=${TOKEN}&limit=1`,
+            );
+            const data = await res.json().catch(() => ({}));
+            const center = data?.features?.[0]?.center as [number, number] | undefined;
+            if (!center) return act;
+            const [lng, lat] = center;
+            return { ...act, lat, lng };
+          } catch {
+            return act;
+          }
+        }),
+      );
+      return results.filter((a) => a.lat != null && a.lng != null);
+    }
+
+    if (trip.destination && TOKEN) {
+      const destination = trip.destination;
+      fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+          destination,
+        )}.json?access_token=${TOKEN}&limit=1`,
+      )
+        .then((r) => r.json())
+        .then(async (data) => {
+          if (renderId !== renderIdRef.current) return;
+          const center = data?.features?.[0]?.center as [number, number] | undefined;
+          if (!center) return applyMarkers(activitiesDeduped);
+          const [lng, lat] = center;
+          const filtered = activitiesDeduped.filter((a) => distanceKm(lat, lng, a.lat!, a.lng!) <= 800);
+          if (filtered.length) {
+            applyMarkers(filtered);
+          } else {
+            const geocoded = await geocodeActivities(activitiesDeduped, destination);
+            applyMarkers(geocoded.length ? geocoded : activitiesDeduped);
+          }
+        })
+        .catch(() => {
+          if (renderId !== renderIdRef.current) return;
+          applyMarkers(activitiesDeduped);
+        });
+    } else {
+      applyMarkers(activitiesDeduped);
+    }
+  }, [trip, clearMarkers, setActiveActivityId, isCollapsed, selectById]);
+
+  // Normalize coords: swap if lat/lng look flipped, drop invalid values
+  function normalizeCoords<T extends { lat?: number; lng?: number }>(act: T): T {
+    const fallbackLat = (act as any).latitude ?? (act as any).location?.lat ?? (act as any).location?.latitude;
+    const fallbackLng = (act as any).longitude ?? (act as any).location?.lng ?? (act as any).location?.longitude;
+    const coords = Array.isArray((act as any).coordinates) ? (act as any).coordinates : null;
+    const rawLat = act.lat ?? fallbackLat ?? (coords ? coords[1] : undefined);
+    const rawLng = act.lng ?? fallbackLng ?? (coords ? coords[0] : undefined);
+    const lat = typeof rawLat === "string" ? Number(rawLat) : rawLat;
+    const lng = typeof rawLng === "string" ? Number(rawLng) : rawLng;
+    if (lat == null || lng == null || Number.isNaN(lat) || Number.isNaN(lng)) {
+      return { ...act, lat: undefined, lng: undefined };
+    }
+    // If lat out of range but lng looks like lat, swap
+    if (Math.abs(lat) > 90 && Math.abs(lng) <= 90) {
+      return { ...act, lat: lng, lng: lat };
+    }
+    // If lng out of range, drop
+    if (Math.abs(lng) > 180 || Math.abs(lat) > 90) {
+      return { ...act, lat: undefined, lng: undefined };
+    }
+    return { ...act, lat, lng };
+  }
+
+  function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+    const toRad = (v: number) => (v * Math.PI) / 180;
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+  }
+
+  function dedupeActivities<T extends { id?: string; name?: string; lat?: number; lng?: number }>(items: T[]) {
+    const groups = new Map<string, { item: T; ids: string[] }>();
+    for (const item of items) {
+      if (item.lat == null || item.lng == null) continue;
+      const nameKey = (item.name ?? "").toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
+      const coordKey = `${item.lat.toFixed(4)}|${item.lng.toFixed(4)}`;
+      const key = nameKey || coordKey;
+      const id = item.id ?? coordKey;
+      const existing = groups.get(key);
+      if (existing) {
+        existing.ids.push(id);
+      } else {
+        groups.set(key, { item, ids: [id] });
+      }
+    }
+    return Array.from(groups.values()).map((g) => ({ ...g.item, _groupIds: g.ids }));
+  }
+
+  // ── React to active activity (itinerary click → fly map) ─────────────────
+  useEffect(() => {
+    if (isCollapsed) return;
+    if (!map.current) return;
+
+    markersRef.current.forEach((marker, id) => {
+      const el = marker.getElement();
+      const isActive = id === activeActivityId;
+
+      if (isActive) {
+        const inner = el.querySelector(".wayfarer-pin-inner") as HTMLDivElement | null;
+        if (inner) inner.style.transform = "scale(1.35)";
+        const pinColor = el.dataset.color ?? "#00E5FF";
+        el.style.boxShadow = `0 0 0 6px ${pinColor}66, 0 4px 18px rgba(0,0,0,0.7)`;
+        el.style.zIndex = "5";
+        map.current!.easeTo({
+          center: marker.getLngLat(),
+          zoom: Math.max(map.current!.getZoom(), 14),
+          duration: 900,
+        });
+      } else {
+        const inner = el.querySelector(".wayfarer-pin-inner") as HTMLDivElement | null;
+        if (inner) inner.style.transform = "scale(1)";
+        const pinColor = el.dataset.color ?? "#00E5FF";
+        el.style.boxShadow = `0 0 0 3px ${pinColor}40, 0 2px 10px rgba(0,0,0,0.55)`;
+        el.style.zIndex = "0";
+      }
+    });
+  }, [activeActivityId, isCollapsed]);
+
+  if (!TOKEN) {
+    return (
+      <div className="flex h-full flex-col">
+        <PanelHeader icon="🗺" label="Map" isCollapsed={isCollapsed} onToggle={onToggle} />
+        <div className="flex flex-1 items-center justify-center text-sm text-muted p-8 text-center">
+          Add{" "}
+          <code className="mx-1 rounded bg-slate-100 px-1 text-xs">NEXT_PUBLIC_MAPBOX_TOKEN</code>{" "}
+          to .env.local to enable the map
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      <PanelHeader icon="🗺" label="Map" isCollapsed={isCollapsed} onToggle={onToggle} />
+      <div className="relative flex-1 overflow-hidden">
+        {!trip && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center text-sm text-white/40 pointer-events-none select-none">
+            Describe a trip to see it on the map
+          </div>
+        )}
+
+        <div ref={mapContainer} className="h-full w-full" />
+
+        {selectedIndex != null && locations[selectedIndex] ? (
+          <LocationDetailPanel
+            location={locations[selectedIndex]}
+            index={selectedIndex}
+            total={locations.length}
+            destination={trip?.destination}
+            pinColor={DAY_COLORS[locations[selectedIndex]._dayIdx % DAY_COLORS.length]}
+            pinNumber={selectedIndex + 1}
+            onClose={() => selectIndex(null)}
+            onPrev={() =>
+              selectIndex(selectedIndex > 0 ? selectedIndex - 1 : selectedIndex)
+            }
+            onNext={() =>
+              selectIndex(
+                selectedIndex < locations.length - 1 ? selectedIndex + 1 : selectedIndex
+              )
+            }
+          />
+        ) : null}
+
+        {/* Popup + control theming */}
+        <style>{`
+          /* Hover tooltip */
+          .wayfarer-tooltip .mapboxgl-popup-content {
+            background: #1a1a1a;
+            color: #fff;
+            border-radius: 8px;
+            padding: 6px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+          }
+          .wayfarer-tooltip .mapboxgl-popup-tip {
+            border-top-color: #1a1a1a !important;
+          }
+          .wayfarer-tooltip .tooltip-name {
+            max-width: 180px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          .mapboxgl-popup { z-index: 30 !important; }
+          /* Hide default Mapbox logo */
+          .mapboxgl-ctrl-logo { display: none !important; }
+          /* Compact attribution */
+          .mapboxgl-ctrl-attrib {
+            background: rgba(8,12,26,0.7) !important;
+            color: rgba(255,255,255,0.35) !important;
+            font-size: 9px !important;
+            border-radius: 4px !important;
+          }
+          .mapboxgl-ctrl-attrib a { color: rgba(0,229,255,0.6) !important; }
+        `}</style>
+      </div>
+    </div>
+  );
+}
+
+function LocationDetailPanel({
+  location,
+  index,
+  total,
+  destination,
+  pinColor,
+  pinNumber,
+  onClose,
+  onPrev,
+  onNext,
+}: {
+  location: any;
+  index: number;
+  total: number;
+  destination?: string;
+  pinColor: string;
+  pinNumber: number;
+  onClose: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  const [fetchedPhoto, setFetchedPhoto] = useState<string | null>(null);
+  const setActivityPhoto = useTripStore((s) => s.setActivityPhoto);
+
+  useEffect(() => {
+    if (location.photoUrl || location.imageUrl) return;
+    let mounted = true;
+    fetch("/api/place-photo", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        placeName: location.name,
+        address: location.address,
+        city: destination,
+        lat: location.lat,
+        lng: location.lng,
+      }),
+    })
+      .then((r) => r.json())
+      .then(({ photoUrl }) => {
+        if (mounted && photoUrl) {
+          setFetchedPhoto(photoUrl);
+          if (location.id) setActivityPhoto(location.id, photoUrl);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, [location.name, location.address, location.photoUrl, location.imageUrl, destination, location.id, setActivityPhoto]);
+
+  const photoUrl = location.photoUrl ?? location.imageUrl ?? fetchedPhoto;
+  const categories =
+    location.categories?.length
+      ? location.categories
+      : location.category
+        ? [location.category]
+        : [];
+  return (
+    <div className="absolute inset-x-3 bottom-3 z-50 rounded-2xl border border-panel-border bg-[#0a0f1f] p-4 shadow-lg text-white md:left-auto md:right-3 md:bottom-3 md:top-3 md:h-[calc(100%-24px)] md:w-[380px]">
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-2">
+          <span
+            className="flex h-8 w-8 items-center justify-center rounded-full text-white text-sm font-bold"
+            style={{ background: pinColor }}
+          >
+            {pinNumber}
+          </span>
+          <div className="text-lg font-semibold">{location.name}</div>
+        </div>
+        <button
+          onClick={onClose}
+          aria-label="Close details"
+          className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 hover:text-white hover:bg-white/10 transition"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="mt-3 flex items-start gap-3">
+        <div className="flex-1 text-sm text-white/75">
+          {location.description ?? "No description available yet."}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {categories.map((c: string) => (
+              <span key={c} className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/80">
+                {c}
+              </span>
+            ))}
+          </div>
+          <div className="mt-3 text-xs text-white/60 flex items-center gap-1">
+            <span>📍</span>
+            <span>{location.address ?? "Address unavailable"}</span>
+          </div>
+          <div className="mt-1 text-xs text-white/60">
+            Hours: {location.hours ?? "Unavailable"}
+          </div>
+          <div className="mt-2 text-xs text-white/70">
+            {location.rating ? `★ ${location.rating}` : "★ —"} · {location.reviewCount ?? "Reviews unavailable"}
+          </div>
+        </div>
+        <div className="h-20 w-28 overflow-hidden rounded-lg border border-panel-border bg-slate-800">
+          {photoUrl ? (
+            <img src={photoUrl} alt={location.name} className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-[10px] text-white/60">
+              Photo unavailable
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center gap-3 text-xs text-white/70">
+        <button className="underline">About</button>
+        <button className="underline">Book</button>
+        <button className="underline">Reviews</button>
+        <button className="underline">Photos</button>
+        <button className="underline">Mentions</button>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between text-xs text-white/60">
+        <button onClick={onPrev} className="underline">← Prev</button>
+        <span>{index + 1} of {total}</span>
+        <button onClick={onNext} className="underline">Next →</button>
+      </div>
+    </div>
+  );
+}

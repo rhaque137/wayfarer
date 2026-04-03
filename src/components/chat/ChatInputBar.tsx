@@ -1,0 +1,40 @@
+"use client";
+
+import React from "react";
+
+interface Props {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  isLoading?: boolean;
+  placeholder?: string;
+}
+
+export function ChatInputBar({ value, onChange, onSubmit, isLoading, placeholder }: Props) {
+  return (
+    <form onSubmit={onSubmit} className="flex items-center gap-2">
+      <input
+        type="text"
+        value={value}
+        onChange={onChange}
+        disabled={isLoading}
+        placeholder={placeholder ?? "Ask anything about your trip..."}
+        className="flex-1 rounded-full border border-panel-border bg-white px-4 py-2 text-sm outline-none focus:border-teal-400 disabled:opacity-50"
+      />
+      <button
+        type="submit"
+        disabled={isLoading || !value.trim()}
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-white disabled:opacity-40 hover:opacity-80 transition"
+      >
+        {isLoading ? (
+          <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+        ) : (
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+            <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+          </svg>
+        )}
+      </button>
+    </form>
+  );
+}
+
