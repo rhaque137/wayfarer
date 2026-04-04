@@ -92,17 +92,17 @@ export function HeroSection({
           Tell Wayfarer where you want to go — and let AI handle the rest.
         </p>
 
-        <div className="mt-8 w-full max-w-2xl rounded-2xl bg-white/90 p-3 shadow-lg backdrop-blur">
+        <div className="mt-8 w-full max-w-2xl rounded-2xl bg-white/90 p-4 shadow-lg backdrop-blur">
           <div className="flex flex-col gap-3 md:flex-row">
             <input
               value={query}
               onChange={(e) => onChange(e.target.value)}
               placeholder={placeholder}
-              className="h-16 flex-1 rounded-xl border border-white/60 bg-white/95 px-4 text-base text-foreground outline-none transition focus:border-teal-400 md:h-14 md:text-sm"
+              className="h-[72px] flex-1 rounded-2xl border border-white/60 bg-white/95 px-5 text-base text-foreground outline-none transition focus:border-teal-400 md:h-14 md:text-sm"
             />
             <button
               onClick={onSubmit}
-              className="h-16 rounded-xl bg-foreground px-6 text-base font-semibold text-white transition hover:opacity-90 md:h-14 md:text-sm"
+              className="h-[72px] rounded-2xl bg-foreground px-6 text-base font-semibold text-white transition hover:opacity-90 md:h-14 md:text-sm"
             >
               Plan My Trip →
             </button>
