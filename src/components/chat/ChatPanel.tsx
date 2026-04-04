@@ -24,7 +24,7 @@ export function ChatPanel({
   const [input, setInput] = useState("");
   const transport = useMemo(() => new DefaultChatTransport({ api: "/api/chat" }), []);
 
-  const { messages, sendMessage, status, error, stop, clearError } = useChat({
+  const { messages, sendMessage, status, error, stop, clearError, setMessages: setChatMessages } = useChat({
     transport,
     onFinish: ({ message }) => {
       let handled = false;
@@ -82,6 +82,23 @@ export function ChatPanel({
       parts: [{ type: "text", text: m.content ?? "" }],
     }));
   }, [messages, storedMessages]);
+
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    if (hydratedRef.current) return;
+    if (!storedMessages?.length) return;
+    if (messages.length) {
+      hydratedRef.current = true;
+      return;
+    }
+    const hydrated = storedMessages.map((m: any) => ({
+      id: m.id,
+      role: m.role,
+      parts: [{ type: "text", text: m.content ?? "" }],
+    }));
+    setChatMessages(hydrated as any);
+    hydratedRef.current = true;
+  }, [storedMessages, messages.length, setChatMessages]);
 
   useEffect(() => {
     if (messages.length) {
