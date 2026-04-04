@@ -1,20 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 
 export function HelpWidget() {
   const [open, setOpen] = useState(false);
-  const { messages, status, input, handleInputChange, handleSubmit, error } = useChat({
-    api: "/api/help-chat",
-    initialMessages: [
-      {
-        id: "help-welcome",
-        role: "assistant",
-        content: "Hi! Ask me anything about using Wayfarer — planning trips, editing itineraries, or troubleshooting.",
-      } as any,
-    ],
-  });
+  const [input, setInput] = useState("");
+  const transport = useMemo(() => new DefaultChatTransport({ api: "/api/help-chat" }), []);
+  const { messages, status, error, sendMessage } = useChat({ transport });
+  const getText = (m: any) =>
+    (m.parts ?? [])
+      .filter((p: any) => p.type === "text")
+      .map((p: any) => p.text)
+      .join("");
 
   const isLoading = status === "streaming" || status === "submitted";
 
@@ -38,12 +37,12 @@ export function HelpWidget() {
                     : "rounded-lg border border-panel-border bg-white p-2"
                 }
               >
-                {m.content}
+                {getText(m)}
               </div>
             ))}
             {messages.length === 0 && (
-              <div className="text-xs text-muted">
-                Ask about planning trips, editing itineraries, or how the app works.
+              <div className="rounded-lg border border-panel-border bg-white p-2 text-xs text-muted">
+                Hi! Ask me anything about using Wayfarer — planning trips, editing itineraries, or troubleshooting.
               </div>
             )}
             {isLoading && <div className="text-xs text-muted">Thinking…</div>}
@@ -51,14 +50,16 @@ export function HelpWidget() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              handleSubmit(e);
+              if (!input.trim()) return;
+              sendMessage({ text: input });
+              setInput("");
             }}
             className="border-t border-panel-border p-2"
           >
             <div className="flex items-center gap-2">
               <input
                 value={input}
-                onChange={handleInputChange}
+                onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask about Wayfarer..."
                 className="w-full rounded-full border border-panel-border bg-white px-3 py-2 text-xs outline-none"
               />

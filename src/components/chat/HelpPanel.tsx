@@ -1,23 +1,19 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 
 export function HelpPanel() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const transport = useMemo(() => new DefaultChatTransport({ api: "/api/help-chat" }), []);
-
-  const { messages, sendMessage, status, input, setInput } = useChat({
-    transport,
-    initialMessages: [
-      {
-        id: "help-welcome",
-        role: "assistant",
-        content: "Hi! Ask me anything about using Wayfarer — planning trips, editing itineraries, or troubleshooting.",
-      } as any,
-    ],
-  });
+  const [input, setInput] = useState("");
+  const { messages, sendMessage, status } = useChat({ transport });
+  const getText = (m: any) =>
+    (m.parts ?? [])
+      .filter((p: any) => p.type === "text")
+      .map((p: any) => p.text)
+      .join("");
 
   const isLoading = status === "streaming" || status === "submitted";
 
@@ -32,9 +28,14 @@ export function HelpPanel() {
             key={m.id}
             className={m.role === "user" ? "rounded-lg bg-foreground/5 p-2" : "rounded-lg bg-white p-2 border border-panel-border"}
           >
-            {m.content}
+            {getText(m)}
           </div>
         ))}
+        {messages.length === 0 && (
+          <div className="rounded-lg border border-panel-border bg-white p-2 text-xs text-muted">
+            Hi! Ask me anything about using Wayfarer — planning trips, editing itineraries, or troubleshooting.
+          </div>
+        )}
         {isLoading && <div className="text-xs text-muted">Thinking…</div>}
         <div ref={bottomRef} />
       </div>
