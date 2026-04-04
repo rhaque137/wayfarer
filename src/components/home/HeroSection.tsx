@@ -92,17 +92,17 @@ export function HeroSection({
           Tell Wayfarer where you want to go — and let AI handle the rest.
         </p>
 
-        <div className="mt-8 w-full max-w-2xl rounded-2xl bg-white/90 p-4 shadow-lg backdrop-blur">
-          <div className="flex flex-col gap-3 md:flex-row">
+        <div className="mt-8 w-full max-w-3xl rounded-3xl bg-white/95 p-5 shadow-xl backdrop-blur md:p-4">
+          <div className="flex flex-col gap-3">
             <input
               value={query}
               onChange={(e) => onChange(e.target.value)}
               placeholder={placeholder}
-              className="h-[72px] flex-1 rounded-2xl border border-white/60 bg-white/95 px-5 text-base text-foreground outline-none transition focus:border-teal-400 md:h-14 md:text-sm"
+              className="h-[84px] w-full rounded-3xl border border-black/10 bg-white px-6 text-lg leading-7 text-foreground outline-none transition focus:border-teal-400 focus:ring-4 focus:ring-teal-400/20 md:h-[64px] md:text-base"
             />
             <button
               onClick={onSubmit}
-              className="h-[72px] rounded-2xl bg-foreground px-6 text-base font-semibold text-white transition hover:opacity-90 md:h-14 md:text-sm"
+              className="h-[64px] w-full rounded-2xl bg-foreground text-base font-semibold text-white transition hover:opacity-90 md:h-[54px] md:text-sm"
             >
               Plan My Trip →
             </button>
@@ -114,7 +114,7 @@ export function HeroSection({
             <button
               key={chip}
               onClick={() => onChange(chip)}
-              className="rounded-full border border-white/40 bg-white/10 px-3 py-1 text-xs hover:bg-white/20"
+              className="rounded-full border border-white/30 bg-white/10 px-4 py-2 text-xs font-medium text-white/90 transition hover:bg-white/20"
             >
               {chip}
             </button>
