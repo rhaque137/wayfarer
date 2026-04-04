@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { HeroSection } from "@/components/home/HeroSection";
 import { UpcomingTrips } from "@/components/home/UpcomingTrips";
 import { DestinationGrid } from "@/components/home/DestinationGrid";
@@ -22,7 +22,6 @@ export default function Home() {
   const [recentTrips, setRecentTrips] = useState<RecentTrip[]>([]);
   const [recentImages, setRecentImages] = useState<Record<string, string>>({});
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const submit = async () => {
     if (!query.trim()) return;
@@ -84,9 +83,9 @@ export default function Home() {
   }, [recentTrips]);
 
   useEffect(() => {
-    const q = searchParams.get("q");
+    const q = new URLSearchParams(window.location.search).get("q");
     if (q) setQuery(q);
-  }, [searchParams]);
+  }, []);
 
   const upcomingTrips = useMemo(
     () =>
