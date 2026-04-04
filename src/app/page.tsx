@@ -10,6 +10,7 @@ import { Testimonials } from "@/components/home/Testimonials";
 import { TravelGuides } from "@/components/home/TravelGuides";
 import { FooterCTA } from "@/components/home/FooterCTA";
 import { HelpWidget } from "@/components/home/HelpWidget";
+import { AuthBar } from "@/components/home/AuthBar";
 
 type RecentTrip = { id: string; name: string; destination: string; coverImage?: string; query?: string };
 const RECENT_IMAGE_OVERRIDES: Record<string, string> = {
@@ -107,7 +108,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto w-full max-w-[1280px] px-6 py-10">
+      <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between px-6 py-6">
+        <div className="text-sm font-semibold text-foreground">Wayfarer</div>
+        <AuthBar />
+      </div>
+      <div className="mx-auto w-full max-w-[1280px] px-6 py-4">
         <HeroSection query={query} onChange={setQuery} onSubmit={submit} />
       </div>
 
