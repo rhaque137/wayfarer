@@ -26,7 +26,6 @@ export function ChatPanel({
 
   const { messages, sendMessage, status, error, stop, clearError } = useChat({
     transport,
-    initialMessages: storedMessages as any,
     onFinish: ({ message }) => {
       let handled = false;
       const toolParts = message.parts
@@ -73,6 +72,16 @@ export function ChatPanel({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const displayMessages = useMemo(() => {
+    if (messages.length) return messages;
+    return (storedMessages ?? []).map((m: any) => ({
+      id: m.id,
+      role: m.role,
+      content: m.content ?? "",
+      parts: [{ type: "text", text: m.content ?? "" }],
+    }));
+  }, [messages, storedMessages]);
 
   useEffect(() => {
     if (messages.length) {
@@ -153,7 +162,7 @@ export function ChatPanel({
             </button>
           </div>
         )}
-        {messages.length === 0 && (
+        {displayMessages.length === 0 && (
           <div className="space-y-4">
             <div className="rounded-xl border border-panel-border bg-white p-4 text-sm text-muted">
               Try: <span className="text-foreground">"4 days in Kyoto for 2 people, love temples and food"</span>
@@ -162,7 +171,7 @@ export function ChatPanel({
           </div>
         )}
 
-        {messages.map((msg) => (
+        {displayMessages.map((msg: any) => (
           <MessageBubble key={msg.id} message={msg} />
         ))}
 
@@ -175,7 +184,7 @@ export function ChatPanel({
         <div ref={bottomRef} />
       </div>
 
-      {trip && messages.length > 0 && (
+      {trip && displayMessages.length > 0 && (
         <div className="border-t border-panel-border px-4 py-2">
           <QuickActions actions={quickActions} onAction={(prompt) => sendMessage({ text: prompt })} />
         </div>
