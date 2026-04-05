@@ -30,6 +30,7 @@ export function DayBlock({ day, date, theme, activities, dayColorIndex = 0 }: Pr
     {},
   );
   const [collapsed, setCollapsed] = useState<boolean>(false);
+  const [isMobile, setIsMobile] = useState(false);
   const defaultedRef = useRef(false);
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
@@ -71,12 +72,22 @@ export function DayBlock({ day, date, theme, activities, dayColorIndex = 0 }: Pr
   }, [activities, token]);
 
   useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth < 768);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile) {
+      setCollapsed(false);
+      return;
+    }
     if (!defaultedRef.current) {
-      const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-      setCollapsed(totalDays > 3 && !isMobile);
+      setCollapsed(totalDays > 3);
       defaultedRef.current = true;
     }
-  }, [totalDays]);
+  }, [totalDays, isMobile]);
 
   return (
     <div className="rounded-lg border border-green-200 bg-green-50 p-3">
