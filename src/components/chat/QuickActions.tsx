@@ -15,7 +15,7 @@ export function QuickActions({ actions, onAction }: Props) {
         <button
           key={a.label}
           onClick={() => onAction(a.prompt)}
-          className="rounded-full border border-panel-border bg-white px-3 py-1 text-sm hover:bg-slate-50 transition"
+          className="rounded-full border border-[#E3D6CE] bg-white px-4 py-2 text-xs font-semibold text-neutral-700 transition-all duration-200 hover:border-[#E8472A] hover:text-[#E8472A]"
         >
           {a.label}
         </button>
@@ -23,4 +23,3 @@ export function QuickActions({ actions, onAction }: Props) {
     </div>
   );
 }
-

@@ -58,10 +58,10 @@ export function MessageBubble({ message }: { message: AnyMessage }) {
   return (
     <div
       className={cn(
-        "rounded-xl px-4 py-3 text-sm leading-relaxed",
+        "rounded-2xl px-4 py-3 text-sm leading-relaxed border",
         message.role === "assistant"
-          ? "bg-white text-foreground"
-          : "bg-slate-100 text-foreground",
+          ? "bg-white text-neutral-800 border-neutral-200 shadow-sm"
+          : "bg-[#F2E7E1] text-neutral-900 border-[#E8D9D0]",
       )}
     >
       {text.split("\n").map((line, i) => (

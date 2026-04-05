@@ -22,12 +22,22 @@ const guides = [
       "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Avenida_9_de_Julio%2C_Buenos_Aires_%2840089810910%29.jpg/330px-Avenida_9_de_Julio%2C_Buenos_Aires_%2840089810910%29.jpg",
     prompt: "Plan a 3-day Buenos Aires guide with tango, food, and classic neighborhoods.",
   },
-  { city: "Copenhagen", label: "3-day guide", prompt: "Plan a 3-day Copenhagen guide with canals, design, and local eats." },
+  {
+    city: "Copenhagen",
+    label: "3-day guide",
+    imageOverride: "https://images.unsplash.com/photo-1513622470522-26c3c8a854bc?w=800",
+    prompt: "Plan a 3-day Copenhagen guide with canals, design, and local eats.",
+  },
 ];
 
 export function TravelGuides() {
   const router = useRouter();
   const [images, setImages] = useState<Record<string, string>>({});
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredGuides = guides.filter((g) =>
+    g.city.toLowerCase().includes(searchQuery.trim().toLowerCase()),
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -61,17 +71,18 @@ export function TravelGuides() {
     };
   }, []);
   return (
-    <section className="mx-auto w-full max-w-6xl px-6 py-16">
+    <section id="guides" className="mx-auto w-full max-w-6xl px-6 py-16">
       <Reveal>
-        <div className="text-2xl font-semibold">Not sure where to go?</div>
-        <div className="mt-2 text-sm text-muted">Browse curated guides and jump in fast.</div>
+        <div className="text-2xl font-semibold text-neutral-900">Not sure where to go?</div>
+        <div className="mt-2 text-sm text-neutral-500">Browse curated guides and jump in fast.</div>
       </Reveal>
 
       <Reveal delay={120}>
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {guides.map((guide) => (
+          {filteredGuides.map((guide) => (
             <button
               key={guide.city}
+              aria-label={`Open ${guide.city} ${guide.label} guide`}
               onClick={async () => {
                 const query = guide.prompt ?? `Plan a trip to ${guide.city}`;
                 const res = await fetch("/api/create-trip", {
@@ -84,7 +95,7 @@ export function TravelGuides() {
                   router.push(`/trip/${data.id}/chat/main?q=${encodeURIComponent(query)}`);
                 }
               }}
-              className="group relative overflow-hidden rounded-2xl border border-panel-border bg-slate-100 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+              className="group relative overflow-hidden rounded-2xl border border-neutral-100 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
             >
               <img
                 src={
@@ -98,23 +109,33 @@ export function TravelGuides() {
                   e.currentTarget.src = `https://picsum.photos/seed/${encodeURIComponent(guide.city)}/800/600`;
                 }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/65 to-transparent" />
-              <div className="absolute bottom-3 left-3 text-left text-white">
-                <div className="text-sm font-semibold">{guide.city}</div>
-                <div className="text-xs text-white/80">{guide.label}</div>
+              <div className="p-4 text-left">
+                <div className="text-sm font-semibold text-neutral-900">{guide.city}</div>
+                <div className="text-xs text-neutral-500">{guide.label}</div>
+                <div className="mt-3 text-sm font-semibold text-[#E8472A] transition-all duration-200 group-hover:translate-x-1">
+                  →
+                </div>
               </div>
             </button>
           ))}
         </div>
+        {filteredGuides.length === 0 && (
+          <div className="mt-6 rounded-2xl border border-neutral-200 bg-white p-6 text-center text-sm text-neutral-600">
+            No guides found. Try another search.
+          </div>
+        )}
       </Reveal>
 
       <Reveal delay={200}>
-        <div className="mt-8 flex items-center gap-3 rounded-2xl border border-panel-border bg-white p-4 shadow-sm">
+        <div className="mt-8 flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
           <span className="text-lg">🔎</span>
           <input
             type="text"
             placeholder="Search a destination..."
-            className="w-full text-sm outline-none"
+            aria-label="Search a destination"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full text-sm text-neutral-700 outline-none"
           />
         </div>
       </Reveal>

@@ -30,7 +30,7 @@ export function ChatThread({
             <div
               className={cn(
                 "flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold",
-                m.role === "assistant" ? "bg-violet/20 text-violet" : "bg-cyan/10 text-cyan",
+                m.role === "assistant" ? "bg-[#E8472A]/15 text-[#E8472A]" : "bg-neutral-100 text-neutral-700",
               )}
             >
               {m.role === "assistant" ? "✦" : "You"}
@@ -58,4 +58,3 @@ export function ChatThread({
     </div>
   );
 }
-

@@ -19,12 +19,12 @@ export function ChatInputBar({ value, onChange, onSubmit, isLoading, placeholder
         onChange={onChange}
         disabled={isLoading}
         placeholder={placeholder ?? "Ask anything about your trip..."}
-        className="flex-1 rounded-full border border-panel-border bg-white px-4 py-2 text-sm outline-none focus:border-teal-400 disabled:opacity-50"
+        className="flex-1 rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm text-neutral-800 outline-none transition-all duration-200 focus:border-[#E8472A] focus:ring-4 focus:ring-[#E8472A]/15 disabled:opacity-50"
       />
       <button
         type="submit"
         disabled={isLoading || !value.trim()}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-white disabled:opacity-40 hover:opacity-80 transition"
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E8472A] text-white disabled:opacity-40 transition-all duration-200 hover:opacity-90"
       >
         {isLoading ? (
           <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -37,4 +37,3 @@ export function ChatInputBar({ value, onChange, onSubmit, isLoading, placeholder
     </form>
   );
 }
-

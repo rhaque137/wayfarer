@@ -12,16 +12,7 @@ interface Props {
   dayColorIndex?: number;
 }
 
-const DAY_COLORS = [
-  "#00E5FF",
-  "#FF6B6B",
-  "#51CF66",
-  "#FFD43B",
-  "#CC5DE8",
-  "#FF922B",
-  "#74C0FC",
-  "#F06595",
-];
+const DAY_COLORS = ["#E8472A", "#7C4DFF", "#FF4DB1", "#F4A261", "#2A9D8F", "#E76F51"];
 
 export function DayBlock({ day, date, theme, activities, dayColorIndex = 0 }: Props) {
   const destination = useTripStore((s) => s.trip?.destination);
@@ -125,7 +116,7 @@ export function DayBlock({ day, date, theme, activities, dayColorIndex = 0 }: Pr
   const showContent = isMobile ? true : !collapsed;
 
   return (
-    <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+    <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
       <button
         onClick={() => {
           if (isMobile) return;
@@ -133,7 +124,7 @@ export function DayBlock({ day, date, theme, activities, dayColorIndex = 0 }: Pr
         }}
         className="mb-2 flex w-full items-center justify-between text-left"
       >
-        <span className="flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+        <span className="flex items-center rounded-full bg-[#F5EAE6] px-3 py-1 text-xs font-semibold text-[#E8472A]">
           <span
             style={{
               display: "inline-block",
@@ -148,10 +139,10 @@ export function DayBlock({ day, date, theme, activities, dayColorIndex = 0 }: Pr
           {day}
         </span>
         <div className="text-right">
-          {date && <span className="text-xs text-muted">{date}</span>}
-          {theme && <div className="text-xs text-teal-600 font-medium">{theme}</div>}
+          {date && <span className="text-xs text-neutral-500">{date}</span>}
+          {theme && <div className="text-xs text-[#7C4DFF] font-semibold">{theme}</div>}
         </div>
-        {!isMobile && <span className="ml-3 text-xs text-muted">{collapsed ? "▸" : "▾"}</span>}
+        {!isMobile && <span className="ml-3 text-xs text-neutral-500">{collapsed ? "▸" : "▾"}</span>}
       </button>
       {showContent && (
         <ul className="space-y-4">
@@ -176,15 +167,15 @@ export function DayBlock({ day, date, theme, activities, dayColorIndex = 0 }: Pr
 
               {index < activities.length - 1 && (
                 <div className="relative ml-6 pl-6">
-                  <div className="absolute left-3 top-0 bottom-0 border-l border-dashed border-slate-300" />
-                  <div className="flex items-center gap-2 text-xs text-muted">
+                  <div className="absolute left-3 top-0 bottom-0 border-l border-dashed border-neutral-300" />
+                  <div className="flex items-center gap-2 text-xs text-neutral-500">
                     <span>🚗</span>
                     <span>{info ? `${info.time} · ${info.distance}` : "Calculating route..."}</span>
                     <a
                       href={directionsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-teal-600 underline"
+                      className="text-[#E8472A] underline"
                     >
                       Directions ▾
                     </a>

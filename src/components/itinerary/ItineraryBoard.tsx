@@ -45,13 +45,13 @@ function toCategory(text: string): Activity["category"] {
 function colorFor(cat: Activity["category"]) {
   switch (cat) {
     case "culture":
-      return "border-cyan/25 bg-cyan/5";
+      return "border-[#E8472A]/25 bg-[#E8472A]/5";
     case "food":
       return "border-amber/30 bg-amber/10";
     case "adventure":
-      return "border-violet/30 bg-violet/10";
+      return "border-[#7C4DFF]/30 bg-[#7C4DFF]/10";
     case "nightlife":
-      return "border-pink/30 bg-pink/10";
+      return "border-[#FF4DB1]/30 bg-[#FF4DB1]/10";
   }
 }
 
@@ -129,7 +129,7 @@ function SlotColumn({
           ))}
         </SortableContext>
         {activities.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-cyan/15 px-3 py-6 text-center text-xs text-foreground/45">
+          <div className="rounded-xl border border-dashed border-[#E8472A]/15 px-3 py-6 text-center text-xs text-foreground/45">
             Drop activity
           </div>
         ) : null}
@@ -214,7 +214,7 @@ export function ItineraryBoard({ tripId, initialSpec }: { tripId: string; initia
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => alert("Coming next: gap fill + suggestions")}>
-            <Sparkles className="h-4 w-4 text-violet" />
+            <Sparkles className="h-4 w-4 text-[#E8472A]" />
             Fill gaps
           </Button>
           <Button variant="primary" onClick={() => alert("Coming next: AI day optimization")}>

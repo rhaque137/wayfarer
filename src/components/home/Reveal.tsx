@@ -25,7 +25,7 @@ export function Reveal({
           observer.disconnect();
         }
       },
-      { threshold: 0.2 },
+      { threshold: 0.05 },
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -36,7 +36,7 @@ export function Reveal({
       ref={ref}
       className={cn(
         "transition-all duration-700 ease-out",
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6",
+        visible ? "opacity-100 translate-y-0" : "opacity-100 translate-y-4",
         className,
       )}
       style={{ transitionDelay: `${delay}ms` }}

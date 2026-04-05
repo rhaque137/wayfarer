@@ -12,27 +12,27 @@ export function PanelHeader({
   onToggle?: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between border-b border-panel-border px-4 py-3">
+    <div className="flex items-center justify-between border-b border-neutral-200 bg-white/80 px-4 py-3 backdrop-blur">
       <div
         className={[
-          "flex items-center gap-2 text-sm font-medium",
+          "flex items-center gap-2 text-sm font-semibold text-neutral-900",
           isCollapsed ? "[writing-mode:vertical-rl] [transform:rotate(180deg)]" : "",
         ].join(" ")}
       >
-        <span className="text-muted">{icon}</span>
+        <span className="text-neutral-500">{icon}</span>
         {label}
       </div>
       <div className="flex items-center gap-2">
         {onToggle ? (
           <button
             onClick={onToggle}
-            className="rounded-md p-1 text-muted hover:bg-slate-100 transition"
+            className="rounded-full border border-neutral-200 p-1 text-neutral-500 transition-all duration-200 hover:border-[#E8472A] hover:text-[#E8472A]"
             aria-label={isCollapsed ? "Expand panel" : "Collapse panel"}
           >
             {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </button>
         ) : null}
-        <Code2 className="h-4 w-4 text-muted" />
+        <Code2 className="h-4 w-4 text-neutral-400" />
       </div>
     </div>
   );

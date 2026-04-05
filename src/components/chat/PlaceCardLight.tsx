@@ -21,30 +21,30 @@ export function PlaceCardLight({ place }: { place: PlaceCardData }) {
   const saved = savedActivities.some((a) => a.id === place.id);
 
   return (
-    <div className="rounded-xl border border-panel-border bg-white p-4 shadow-sm hover-lift">
+    <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-center justify-between">
-        <div className="text-sm text-muted">{place.category}</div>
+        <div className="text-sm text-neutral-500">{place.category}</div>
         <div className="flex items-center gap-1 text-amber-600 text-sm">
           <Star className="h-4 w-4 fill-amber-500 stroke-amber-500" />
           {place.rating?.toFixed(1) ?? "—"}
         </div>
       </div>
-      <div className="mt-1 text-lg font-semibold">{place.name}</div>
+      <div className="mt-1 text-lg font-semibold text-neutral-900">{place.name}</div>
       <div className="mt-3 grid gap-3 md:grid-cols-[1fr_160px]">
-        <p className="text-sm text-muted">{place.description}</p>
+        <p className="text-sm text-neutral-600">{place.description}</p>
         <div className="relative h-[120px] w-full overflow-hidden rounded-xl">
           {place.imageUrl ? (
             <Image src={place.imageUrl} alt={place.name} fill className="object-cover" />
           ) : (
-            <div className="h-full w-full bg-slate-100" />
+            <div className="h-full w-full bg-neutral-100" />
           )}
         </div>
       </div>
       <div className="mt-3 flex items-center justify-between">
-        <div className="text-xs text-muted">Mentioned by {place.mentions ?? 12} people</div>
+        <div className="text-xs text-neutral-500">Mentioned by {place.mentions ?? 12} people</div>
         <div className="flex items-center gap-2">
           <button
-            className={`rounded-full px-3 py-1 text-xs ${saved ? "bg-[#E8453C] text-white" : "bg-slate-100"}`}
+            className={`rounded-full px-3 py-1 text-xs transition-all duration-200 ${saved ? "bg-[#E8472A] text-white" : "bg-neutral-100 text-neutral-700"}`}
             onClick={() =>
               saved
                 ? unsaveActivity(place.id)
@@ -62,7 +62,7 @@ export function PlaceCardLight({ place }: { place: PlaceCardData }) {
             {saved ? "Saved" : "Save"}
           </button>
           <button
-            className="rounded-full px-3 py-1 text-xs bg-slate-100"
+            className="rounded-full px-3 py-1 text-xs bg-neutral-100 text-neutral-700 transition-all duration-200 hover:bg-[#E8472A] hover:text-white"
           >
             <Plus className="mr-1 inline h-3 w-3" />
             Add

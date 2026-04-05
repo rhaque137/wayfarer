@@ -77,7 +77,7 @@ export function ChatInput({ value, onChange, onSend, onTranscribe, disabled }: P
           <Mic className="mx-auto h-4 w-4" />
         </button>
         <button
-          className="focus-ring h-10 w-10 rounded-full bg-cyan/20 text-cyan"
+          className="focus-ring h-10 w-10 rounded-full bg-[#E8472A]/15 text-[#E8472A]"
           onClick={onSend}
           disabled={disabled}
           aria-label="Send"
@@ -87,8 +87,8 @@ export function ChatInput({ value, onChange, onSend, onTranscribe, disabled }: P
       </div>
 
       {recording ? (
-        <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-cyan/10">
-          <div className="h-full w-1/3 animate-pulse rounded-full bg-cyan/60" />
+        <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#E8472A]/10">
+          <div className="h-full w-1/3 animate-pulse rounded-full bg-[#E8472A]/60" />
         </div>
       ) : null}
       {recordingError ? <div className="mt-2 text-xs text-pink">{recordingError}</div> : null}

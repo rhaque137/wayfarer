@@ -5,20 +5,20 @@ interface Props {
 
 export function AIChangesBanner({ onAccept, onReject }: Props) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm">
-      <span className="flex items-center gap-1 text-blue-700">
+    <div className="flex items-center justify-between rounded-2xl border border-[#EAD9D0] bg-white px-4 py-3 text-sm shadow-sm">
+      <span className="flex items-center gap-1 font-semibold text-[#E8472A]">
         <span>✦</span> AI suggested changes
       </span>
       <div className="flex gap-2">
         <button
           onClick={onReject}
-          className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-red-600 hover:bg-red-50 border border-red-200 transition"
+          className="flex items-center gap-1 rounded-full px-3 py-1 text-xs text-neutral-600 hover:bg-neutral-100 border border-neutral-200 transition-all duration-200"
         >
           ✕ Reject
         </button>
         <button
           onClick={onAccept}
-          className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-green-600 hover:bg-green-50 border border-green-200 transition"
+          className="flex items-center gap-1 rounded-full px-3 py-1 text-xs text-white bg-[#E8472A] hover:opacity-90 border border-[#E8472A] transition-all duration-200"
         >
           ✓ Accept
         </button>
@@ -26,4 +26,3 @@ export function AIChangesBanner({ onAccept, onReject }: Props) {
     </div>
   );
 }
-

@@ -142,27 +142,33 @@ export function ChatPanel({
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex flex-col border-b border-panel-border">
-        <div className="px-4 pt-3">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 rounded-full bg-foreground px-3 py-1 text-xs font-semibold text-white shadow-sm hover:opacity-90"
-          >
-            🏠 Home
-          </Link>
+    <div className="flex h-full flex-col bg-[#FAF7F3]">
+      <div className="flex flex-col border-b border-neutral-200">
+        <div className="flex items-center justify-between px-4 pt-4">
+          <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
+            <span className="h-2 w-2 rounded-full bg-[#E8472A]" />
+            Wayfarer AI
+          </div>
+          <div className="flex items-center gap-2 text-neutral-400">
+            <button
+              onClick={onToggle}
+              className="rounded-full border border-neutral-200 bg-white px-2 py-1 text-xs text-neutral-600 transition-all duration-200 hover:border-[#E8472A] hover:text-[#E8472A]"
+            >
+              ✕
+            </button>
+          </div>
         </div>
         <PanelHeader icon="💬" label="Chat" isCollapsed={false} onToggle={onToggle} />
 
         {trip && (
           <div className="px-4 pb-2">
-            <div className="text-xs text-muted">
-              <Link href="/" className="font-semibold text-foreground hover:underline">
+            <div className="text-xs text-neutral-500">
+              <Link href="/" className="font-semibold text-neutral-900 hover:underline">
                 Home
               </Link>{" "}
               › {trip.destination}
             </div>
-            <div className="mt-1 text-sm font-medium">{trip.name}</div>
+            <div className="mt-1 text-sm font-semibold text-neutral-900">{trip.name}</div>
           </div>
         )}
       </div>
@@ -181,8 +187,8 @@ export function ChatPanel({
         )}
         {displayMessages.length === 0 && (
           <div className="space-y-4">
-            <div className="rounded-xl border border-panel-border bg-white p-4 text-sm text-muted">
-              Try: <span className="text-foreground">"4 days in Kyoto for 2 people, love temples and food"</span>
+            <div className="rounded-2xl border border-neutral-200 bg-white p-4 text-sm text-neutral-600 shadow-sm">
+              Try: <span className="text-neutral-900">"4 days in Kyoto for 2 people, love temples and food"</span>
             </div>
             <QuickActions actions={quickActions} onAction={(prompt) => sendMessage({ text: prompt })} />
           </div>
@@ -193,7 +199,7 @@ export function ChatPanel({
         ))}
 
         {(status === "streaming" || status === "submitted") && (
-          <div className="flex items-center gap-2 text-sm text-muted">
+          <div className="flex items-center gap-2 text-sm text-neutral-500">
             <span className="animate-pulse">✦</span> Planning your trip...
           </div>
         )}
@@ -202,12 +208,12 @@ export function ChatPanel({
       </div>
 
       {trip && displayMessages.length > 0 && (
-        <div className="border-t border-panel-border px-4 py-2">
+        <div className="border-t border-neutral-200 px-4 py-2 bg-white/70">
           <QuickActions actions={quickActions} onAction={(prompt) => sendMessage({ text: prompt })} />
         </div>
       )}
 
-      <div className="border-t border-panel-border p-3">
+      <div className="border-t border-neutral-200 p-3 bg-white/80">
         <ChatInputBar
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -224,7 +230,7 @@ export function ChatPanel({
         {(status === "streaming" || status === "submitted") && (
           <button
             onClick={() => stop()}
-            className="mt-2 text-xs text-muted underline"
+            className="mt-2 text-xs text-neutral-500 underline"
           >
             Stop response
           </button>

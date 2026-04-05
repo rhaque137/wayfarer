@@ -6,20 +6,10 @@ import { useTripStore } from "@/store/tripStore";
 import { PanelHeader } from "@/components/ui/PanelHeader";
 
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
-const NAVY = "#040710";
-const DAY_COLORS = [
-  "#00E5FF", // Day 1 — cyan
-  "#FF6B6B", // Day 2 — coral
-  "#51CF66", // Day 3 — green
-  "#FFD43B", // Day 4 — yellow
-  "#CC5DE8", // Day 5 — purple
-  "#FF922B", // Day 6 — orange
-  "#74C0FC", // Day 7 — sky blue
-  "#F06595", // Day 8 — pink
-];
+const DAY_COLORS = ["#E8472A", "#7C4DFF", "#FF4DB1", "#F4A261", "#2A9D8F", "#E76F51"];
 
 // ── Custom dark-glass zoom control ──────────────────────────────────────────
-class DarkZoomControl implements mapboxgl.IControl {
+class LightZoomControl implements mapboxgl.IControl {
   private container!: HTMLDivElement;
   private map!: mapboxgl.Map;
 
@@ -40,12 +30,12 @@ class DarkZoomControl implements mapboxgl.IControl {
       const b = document.createElement("button");
       b.textContent = label;
       b.style.cssText = `
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        background: rgba(10,14,26,0.85);
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: rgba(255,255,255,0.95);
         backdrop-filter: blur(8px);
-        border: 1px solid rgba(0,229,255,0.18);
+        border: 1px solid rgba(232,71,42,0.2);
         color: ${DAY_COLORS[0]};
         font-size: 18px;
         line-height: 1;
@@ -53,13 +43,15 @@ class DarkZoomControl implements mapboxgl.IControl {
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: background 0.15s;
+        transition: background 0.15s, border-color 0.15s;
       `;
       b.addEventListener("mouseenter", () => {
-        b.style.background = "rgba(0,229,255,0.12)";
+        b.style.background = "rgba(232,71,42,0.08)";
+        b.style.borderColor = "rgba(232,71,42,0.5)";
       });
       b.addEventListener("mouseleave", () => {
-        b.style.background = "rgba(10,14,26,0.85)";
+        b.style.background = "rgba(255,255,255,0.95)";
+        b.style.borderColor = "rgba(232,71,42,0.2)";
       });
       b.addEventListener("click", onClick);
       return b;
@@ -135,14 +127,14 @@ export function MapPanel({
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: "mapbox://styles/mapbox/navigation-night-v1",
+      style: "mapbox://styles/mapbox/light-v11",
       center: [0, 20],
       zoom: 1.8,
       attributionControl: false,
     });
 
     map.current.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
-    map.current.addControl(new DarkZoomControl());
+    map.current.addControl(new LightZoomControl());
     map.current.on("load", () => map.current?.resize());
 
     return () => {
@@ -216,13 +208,13 @@ export function MapPanel({
         height: 36px;
         cursor: pointer;
         position: relative;
-        filter: drop-shadow(0 2px 8px rgba(0,0,0,0.4));
+        filter: drop-shadow(0 2px 8px rgba(0,0,0,0.25));
         transition: filter 0.15s ease;
       `;
       el.innerHTML = `<div class="wayfarer-pin-inner" style="transition: transform 0.15s ease; transform-origin: 50% 100%;">
         <svg width="28" height="36" viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22s14-12.667 14-22C28 6.268 21.732 0 14 0z" fill="${pinColor}"/>
-          <text x="14" y="17" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="12" font-weight="800" font-family="Inter, sans-serif">${i + 1}</text>
+          <text x="14" y="17" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="12" font-weight="800" font-family="Plus Jakarta Sans, sans-serif">${i + 1}</text>
         </svg>
       </div>`;
 
@@ -412,9 +404,9 @@ export function MapPanel({
     return (
       <div className="flex h-full flex-col">
         <PanelHeader icon="🗺" label="Map" isCollapsed={isCollapsed} onToggle={onToggle} />
-        <div className="flex flex-1 items-center justify-center text-sm text-muted p-8 text-center">
+        <div className="flex flex-1 items-center justify-center text-sm text-neutral-500 p-8 text-center">
           Add{" "}
-          <code className="mx-1 rounded bg-slate-100 px-1 text-xs">NEXT_PUBLIC_MAPBOX_TOKEN</code>{" "}
+          <code className="mx-1 rounded bg-neutral-100 px-1 text-xs">NEXT_PUBLIC_MAPBOX_TOKEN</code>{" "}
           to .env.local to enable the map
         </div>
       </div>
@@ -426,7 +418,7 @@ export function MapPanel({
       <PanelHeader icon="🗺" label="Map" isCollapsed={isCollapsed} onToggle={onToggle} />
       <div className="relative flex-1 overflow-hidden">
         {!trip && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center text-sm text-white/40 pointer-events-none select-none">
+          <div className="absolute inset-0 z-10 flex items-center justify-center text-sm text-neutral-500 pointer-events-none select-none">
             Describe a trip to see it on the map
           </div>
         )}
@@ -457,16 +449,17 @@ export function MapPanel({
         <style>{`
           /* Hover tooltip */
           .wayfarer-tooltip .mapboxgl-popup-content {
-            background: #1a1a1a;
-            color: #fff;
-            border-radius: 8px;
+            background: #ffffff;
+            color: #1a1a1a;
+            border-radius: 10px;
             padding: 6px 8px;
             font-size: 11px;
             font-weight: 600;
-            box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+            box-shadow: 0 8px 18px rgba(26,26,26,0.18);
+            border: 1px solid rgba(232,71,42,0.15);
           }
           .wayfarer-tooltip .mapboxgl-popup-tip {
-            border-top-color: #1a1a1a !important;
+            border-top-color: #ffffff !important;
           }
           .wayfarer-tooltip .tooltip-name {
             max-width: 180px;
@@ -479,12 +472,12 @@ export function MapPanel({
           .mapboxgl-ctrl-logo { display: none !important; }
           /* Compact attribution */
           .mapboxgl-ctrl-attrib {
-            background: rgba(8,12,26,0.7) !important;
-            color: rgba(255,255,255,0.35) !important;
+            background: rgba(255,255,255,0.85) !important;
+            color: rgba(26,26,26,0.45) !important;
             font-size: 9px !important;
-            border-radius: 4px !important;
+            border-radius: 6px !important;
           }
-          .mapboxgl-ctrl-attrib a { color: rgba(0,229,255,0.6) !important; }
+          .mapboxgl-ctrl-attrib a { color: rgba(232,71,42,0.8) !important; }
         `}</style>
       </div>
     </div>
@@ -550,7 +543,7 @@ function LocationDetailPanel({
         ? [location.category]
         : [];
   return (
-    <div className="absolute inset-x-3 bottom-3 z-50 rounded-2xl border border-panel-border bg-[#0a0f1f] p-4 shadow-lg text-white md:left-auto md:right-3 md:bottom-3 md:top-3 md:h-[calc(100%-24px)] md:w-[380px]">
+    <div className="absolute inset-x-3 bottom-3 z-50 rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg text-neutral-900 md:left-auto md:right-3 md:bottom-3 md:top-3 md:h-[calc(100%-24px)] md:w-[380px]">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
           <span
@@ -564,45 +557,45 @@ function LocationDetailPanel({
         <button
           onClick={onClose}
           aria-label="Close details"
-          className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 hover:text-white hover:bg-white/10 transition"
+          className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-900 hover:border-[#E8472A] transition"
         >
           ✕
         </button>
       </div>
 
       <div className="mt-3 flex items-start gap-3">
-        <div className="flex-1 text-sm text-white/75">
+        <div className="flex-1 text-sm text-neutral-600">
           {location.description ?? "No description available yet."}
           <div className="mt-3 flex flex-wrap gap-2">
             {categories.map((c: string) => (
-              <span key={c} className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/80">
+              <span key={c} className="rounded-full border border-neutral-200 bg-[#F5F0EB] px-2 py-0.5 text-xs text-neutral-700">
                 {c}
               </span>
             ))}
           </div>
-          <div className="mt-3 text-xs text-white/60 flex items-center gap-1">
+          <div className="mt-3 text-xs text-neutral-500 flex items-center gap-1">
             <span>📍</span>
             <span>{location.address ?? "Address unavailable"}</span>
           </div>
-          <div className="mt-1 text-xs text-white/60">
+          <div className="mt-1 text-xs text-neutral-500">
             Hours: {location.hours ?? "Unavailable"}
           </div>
-          <div className="mt-2 text-xs text-white/70">
+          <div className="mt-2 text-xs text-neutral-600">
             {location.rating ? `★ ${location.rating}` : "★ —"} · {location.reviewCount ?? "Reviews unavailable"}
           </div>
         </div>
-        <div className="h-20 w-28 overflow-hidden rounded-lg border border-panel-border bg-slate-800">
+        <div className="h-20 w-28 overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100">
           {photoUrl ? (
             <img src={photoUrl} alt={location.name} className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-[10px] text-white/60">
+            <div className="flex h-full w-full items-center justify-center text-[10px] text-neutral-500">
               Photo unavailable
             </div>
           )}
         </div>
       </div>
 
-      <div className="mt-4 flex items-center gap-3 text-xs text-white/70">
+      <div className="mt-4 flex items-center gap-3 text-xs text-neutral-600">
         <button className="underline">About</button>
         <button className="underline">Book</button>
         <button className="underline">Reviews</button>
@@ -610,7 +603,7 @@ function LocationDetailPanel({
         <button className="underline">Mentions</button>
       </div>
 
-      <div className="mt-4 flex items-center justify-between text-xs text-white/60">
+      <div className="mt-4 flex items-center justify-between text-xs text-neutral-500">
         <button onClick={onPrev} className="underline">← Prev</button>
         <span>{index + 1} of {total}</span>
         <button onClick={onNext} className="underline">Next →</button>

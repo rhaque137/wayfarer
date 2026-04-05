@@ -35,14 +35,14 @@ export function PlaceCard({
       whileHover={{ y: -3 }}
       onClick={() => onSelect?.(place)}
       className={cn(
-        "glass hover-lift w-full rounded-2xl border border-cyan/20 p-4 text-left",
-        active && "border-cyan/50 bg-cyan/10",
+        "glass hover-lift w-full rounded-2xl border border-neutral-200 p-4 text-left",
+        active && "border-[#E8472A]/50 bg-[#E8472A]/10",
       )}
     >
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-sm text-foreground/70">
-            <MapPin className="h-4 w-4 text-cyan" />
+            <MapPin className="h-4 w-4 text-[#E8472A]" />
             {place.category}
           </div>
           <div className="mt-1 text-lg font-semibold">{place.name}</div>
@@ -54,7 +54,7 @@ export function PlaceCard({
 
       <div className="mt-3 grid gap-4 md:grid-cols-[1fr_180px] md:items-center">
         <div className="text-sm text-foreground/75">{place.description}</div>
-        <div className="relative h-[120px] w-full overflow-hidden rounded-2xl border border-cyan/20">
+        <div className="relative h-[120px] w-full overflow-hidden rounded-2xl border border-neutral-200">
           <InlinePhoto query={place.photoQuery ?? place.name} alt={place.name} />
         </div>
       </div>
@@ -67,7 +67,7 @@ export function PlaceCard({
           <button
             className={cn(
               "focus-ring flex h-9 items-center gap-2 rounded-full px-3 text-xs",
-              saved ? "bg-pink text-foreground" : "glass text-foreground/70",
+              saved ? "bg-[#FF4DB1]/20 text-foreground" : "glass text-foreground/70",
             )}
             onClick={(e) => {
               e.stopPropagation();
@@ -80,14 +80,14 @@ export function PlaceCard({
           <button
             className={cn(
               "focus-ring flex h-9 items-center gap-2 rounded-full px-3 text-xs",
-              added ? "bg-cyan/20 text-foreground" : "glass text-foreground/70",
+              added ? "bg-[#E8472A]/20 text-foreground" : "glass text-foreground/70",
             )}
             onClick={(e) => {
               e.stopPropagation();
               setAdded(true);
             }}
           >
-            {added ? <Check className="h-4 w-4 text-cyan" /> : <Plus className="h-4 w-4" />}
+            {added ? <Check className="h-4 w-4 text-[#E8472A]" /> : <Plus className="h-4 w-4" />}
             {added ? "Added" : "Add"}
           </button>
         </div>
@@ -95,4 +95,3 @@ export function PlaceCard({
     </motion.button>
   );
 }
-

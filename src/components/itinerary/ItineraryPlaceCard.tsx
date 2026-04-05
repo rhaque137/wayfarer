@@ -93,24 +93,23 @@ export function ItineraryPlaceCard({ activity, index, destination, pinColor }: P
         if (hasCoords) setActiveActivityId(isActive ? null : activity.id);
       }}
       className={[
-        "flex items-center justify-between gap-4 rounded-2xl bg-white p-4 shadow-sm border border-panel-border",
-        "hover-lift",
+        "flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-white p-5 shadow-sm border border-neutral-200 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
         hasCoords ? "cursor-pointer" : "",
-        isActive ? "ring-2 ring-cyan-300" : "",
+        isActive ? "ring-2 ring-[#E8472A]/40" : "",
       ].join(" ")}
     >
-      <div className="flex items-start gap-3 min-w-0">
+      <div className="flex items-start gap-3 min-w-0 w-full">
         <TeardropPin number={index + 1} color={pinColor ?? "#00E5FF"} />
         <div className="min-w-0">
-          <div className="font-semibold text-foreground truncate">{activity.name}</div>
-          <div className={["mt-1 text-xs text-muted", expanded ? "" : "line-clamp-2"].join(" ")}>
+          <div className="text-base font-semibold text-neutral-900 truncate">{activity.name}</div>
+          <div className={["mt-2 text-sm leading-relaxed text-neutral-600", expanded ? "" : "line-clamp-3"].join(" ")}>
             <span className="italic">From the web:</span>{" "}
             {activity.description ?? "No description available yet."}
           </div>
           {expanded && activity.address && (
-            <div className="mt-1 text-xs text-muted/70">{activity.address}</div>
+            <div className="mt-2 text-xs text-neutral-500">{activity.address}</div>
           )}
-          <div className="mt-2 text-xs text-teal-600">
+          <div className="mt-3 text-xs font-semibold text-[#E8472A]">
             <a href={mapsUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
               Open in Google Maps
             </a>
@@ -118,8 +117,8 @@ export function ItineraryPlaceCard({ activity, index, destination, pinColor }: P
         </div>
       </div>
 
-      <div className="relative h-[120px] w-[160px] flex-shrink-0 overflow-hidden rounded-xl border border-panel-border bg-slate-100">
-        {photoLoading && <div className="absolute inset-0 animate-pulse bg-slate-200" />}
+      <div className="relative h-40 w-full flex-shrink-0 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100 sm:h-[120px] sm:w-[160px]">
+        {photoLoading && <div className="absolute inset-0 animate-pulse bg-neutral-200" />}
         {photoUrl ? (
           <Image
             src={photoUrl}
@@ -130,7 +129,7 @@ export function ItineraryPlaceCard({ activity, index, destination, pinColor }: P
             onLoadingComplete={() => setPhotoLoading(false)}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-[10px] text-muted">
+          <div className="flex h-full w-full items-center justify-center text-[10px] text-neutral-500">
             Photo unavailable
           </div>
         )}

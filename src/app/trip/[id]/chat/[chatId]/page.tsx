@@ -11,7 +11,7 @@ export default function TripChatPage() {
   const [mapCollapsed, setMapCollapsed] = useState(false);
   const [itineraryCollapsed, setItineraryCollapsed] = useState(false);
   const [chatWidth, setChatWidth] = useState(400);
-  const [itineraryWidth, setItineraryWidth] = useState(380);
+  const [itineraryWidth, setItineraryWidth] = useState(360);
   const [dragging, setDragging] = useState<null | "left" | "right">(null);
   const [activeTab, setActiveTab] = useState<"chat" | "map" | "itinerary">("chat");
   const [isMobile, setIsMobile] = useState(false);
@@ -31,15 +31,15 @@ export default function TripChatPage() {
       const minMap = 320;
 
       if (dragging === "left") {
-        const maxChat = rect.width - (itineraryCollapsed ? 48 : itineraryWidth) - minMap - 8;
-        const next = Math.max(minChat, Math.min(x, maxChat));
-        setChatWidth(next);
+        const maxItin = rect.width - (chatCollapsed ? 48 : chatWidth) - minMap - 8;
+        const next = Math.max(minItin, Math.min(x, maxItin));
+        setItineraryWidth(next);
       }
       if (dragging === "right") {
-        const mapWidth = rect.width - (chatCollapsed ? 48 : chatWidth) - 8;
-        const maxItin = mapWidth - minMap;
-        const next = Math.max(minItin, Math.min(rect.width - x, maxItin));
-        setItineraryWidth(next);
+        const mapWidth = rect.width - (itineraryCollapsed ? 48 : itineraryWidth) - 8;
+        const maxChat = mapWidth - minMap;
+        const next = Math.max(minChat, Math.min(rect.width - x, maxChat));
+        setChatWidth(next);
       }
     }
 
@@ -83,40 +83,38 @@ export default function TripChatPage() {
   }, [trip, lastQuery]);
 
   return (
-    <div ref={containerRef} className="flex h-dvh flex-col overflow-hidden bg-background md:flex-row">
+    <div ref={containerRef} className="flex h-dvh flex-col overflow-hidden bg-[#F5F0EB] md:flex-row">
       {isMobile && (
-        <div className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-panel-border bg-white px-3 py-2 md:hidden">
-          {[
-            { id: "chat", label: "Chat" },
-            { id: "map", label: "Map" },
-            { id: "itinerary", label: "Itinerary" },
-          ].map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id as typeof activeTab)}
-              className={[
-                "flex-1 rounded-full px-3 py-2 text-xs font-semibold transition",
-                activeTab === t.id ? "bg-foreground text-white" : "bg-slate-100 text-foreground/70",
-              ].join(" ")}
-            >
-              {t.label}
-            </button>
-          ))}
+        <div className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-neutral-200 bg-[#FAF7F3] px-4 py-3 md:hidden">
+          <a
+            href="/"
+            className="text-sm font-bold text-neutral-900"
+            aria-label="Back to home"
+          >
+            Wayfarer AI
+          </a>
+          <div className="flex items-center gap-2 text-neutral-500">
+            <button className="h-8 w-8 rounded-full border border-neutral-200 bg-white text-xs">⟲</button>
+            <button className="h-8 w-8 rounded-full border border-neutral-200 bg-white text-xs">⤴︎</button>
+            <div className="h-8 w-8 rounded-full bg-neutral-200 text-xs font-semibold text-neutral-700 flex items-center justify-center">
+              U
+            </div>
+          </div>
         </div>
       )}
 
-      {(!isMobile || activeTab === "chat") && (
+      {(!isMobile || activeTab === "itinerary") && (
         <div
           className={[
-            "border-r border-panel-border transition-all duration-300 ease-in-out",
-            chatCollapsed ? "w-12 overflow-hidden" : "",
-            isMobile ? "w-full flex-1 min-h-0" : "",
+            "border-r border-neutral-200 bg-[#FAF7F3] transition-all duration-300 ease-in-out",
+            itineraryCollapsed ? "w-12 overflow-hidden" : "",
+            isMobile ? "w-full flex-1 min-h-0 pb-24" : "",
           ].join(" ")}
-          style={!chatCollapsed && !isMobile ? { width: chatWidth } : undefined}
+          style={!itineraryCollapsed && !isMobile ? { width: itineraryWidth } : undefined}
         >
-          <ChatPanel
-            isCollapsed={chatCollapsed}
-            onToggle={() => setChatCollapsed((v) => !v)}
+          <ItineraryPanel
+            isCollapsed={itineraryCollapsed}
+            onToggle={() => setItineraryCollapsed((v) => !v)}
           />
         </div>
       )}
@@ -124,16 +122,16 @@ export default function TripChatPage() {
       {!isMobile && (
         <div
           onMouseDown={() => setDragging("left")}
-          className="w-2 cursor-col-resize bg-transparent hover:bg-slate-100"
+          className="w-2 cursor-col-resize bg-transparent hover:bg-white/60"
         />
       )}
 
       {(!isMobile || activeTab === "map") && (
         <div
           className={[
-            "border-r border-panel-border transition-all duration-300 ease-in-out",
+            "border-r border-neutral-200 bg-white transition-all duration-300 ease-in-out",
             mapCollapsed ? "w-12 overflow-hidden" : "flex-1",
-            isMobile ? "w-full flex-1 min-h-0" : "",
+            isMobile ? "w-full flex-1 min-h-0 pb-24" : "",
           ].join(" ")}
         >
           <MapPanel
@@ -149,23 +147,50 @@ export default function TripChatPage() {
       {!isMobile && (
         <div
           onMouseDown={() => setDragging("right")}
-          className="w-2 cursor-col-resize bg-transparent hover:bg-slate-100"
+          className="w-2 cursor-col-resize bg-transparent hover:bg-white/60"
         />
       )}
 
-      {(!isMobile || activeTab === "itinerary") && (
+      {(!isMobile || activeTab === "chat") && (
         <div
           className={[
             "transition-all duration-300 ease-in-out",
-            itineraryCollapsed ? "w-12 overflow-hidden" : "",
-            isMobile ? "w-full flex-1 min-h-0" : "",
+            "bg-[#FAF7F3]",
+            chatCollapsed ? "w-12 overflow-hidden" : "",
+            isMobile ? "w-full flex-1 min-h-0 pb-24" : "",
           ].join(" ")}
-          style={!itineraryCollapsed && !isMobile ? { width: itineraryWidth } : undefined}
+          style={!chatCollapsed && !isMobile ? { width: chatWidth } : undefined}
         >
-          <ItineraryPanel
-            isCollapsed={itineraryCollapsed}
-            onToggle={() => setItineraryCollapsed((v) => !v)}
+          <ChatPanel
+            isCollapsed={chatCollapsed}
+            onToggle={() => setChatCollapsed((v) => !v)}
           />
+        </div>
+      )}
+
+      {isMobile && (
+        <div className="fixed bottom-3 left-1/2 z-40 w-[min(520px,calc(100%-24px))] -translate-x-1/2 md:hidden">
+          <div className="flex items-center justify-between rounded-2xl border border-neutral-200 bg-white/95 p-2 shadow-sm backdrop-blur">
+            {[
+              { id: "map", label: "Overview", icon: "▦" },
+              { id: "itinerary", label: "Itinerary", icon: "🗓" },
+              { id: "chat", label: "AI Chat", icon: "✦" },
+            ].map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(t.id as typeof activeTab)}
+                className={[
+                  "flex flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[10px] font-semibold transition-all duration-200",
+                  activeTab === t.id
+                    ? "bg-[#F5EAE6] text-[#E8472A]"
+                    : "text-neutral-500",
+                ].join(" ")}
+              >
+                <span className="text-sm">{t.icon}</span>
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>

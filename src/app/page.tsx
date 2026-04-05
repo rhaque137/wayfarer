@@ -11,6 +11,7 @@ import { TravelGuides } from "@/components/home/TravelGuides";
 import { FooterCTA } from "@/components/home/FooterCTA";
 import { HelpWidget } from "@/components/home/HelpWidget";
 import { AuthBar } from "@/components/home/AuthBar";
+import { SiteFooter } from "@/components/home/SiteFooter";
 
 type RecentTrip = { id: string; name: string; destination: string; coverImage?: string; query?: string };
 const RECENT_IMAGE_OVERRIDES: Record<string, string> = {
@@ -22,6 +23,8 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [recentTrips, setRecentTrips] = useState<RecentTrip[]>([]);
   const [recentImages, setRecentImages] = useState<Record<string, string>>({});
+  const [mounted, setMounted] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
 
   const submit = async () => {
@@ -88,6 +91,24 @@ export default function Home() {
     if (q) setQuery(q);
   }, []);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const focusHeroSearch = () => {
+    const el = document.getElementById("hero-search") as HTMLInputElement | null;
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    el?.focus();
+  };
+
+  const handlePlanNew = () => {
+    if (query.trim()) {
+      void submit();
+      return;
+    }
+    focusHeroSearch();
+  };
+
   const upcomingTrips = useMemo(
     () =>
       recentTrips.map((trip, idx) => {
@@ -107,21 +128,107 @@ export default function Home() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between px-6 py-6">
-        <div className="text-sm font-semibold text-foreground">Wayfarer</div>
-        <AuthBar />
+    <div id="top" className="min-h-screen bg-background">
+      <div className="sticky top-0 z-40 border-b border-neutral-200 bg-white/95 shadow-sm backdrop-blur">
+        <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-6">
+            <div className="text-lg font-bold text-[#E8472A]">Wayfarer</div>
+            <nav className="hidden items-center gap-4 md:flex">
+              {[
+                { label: "Home", href: "#top", active: true },
+                { label: "Upcoming", href: "#upcoming" },
+                { label: "Explore", href: "#explore" },
+                { label: "Guides", href: "#guides" },
+              ].map((item) => (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  className={`text-sm font-medium text-neutral-600 transition-all duration-200 hover:text-[#E8472A] ${
+                    item.active ? "border-b-2 border-[#E8472A] pb-1 text-[#E8472A]" : "border-b-2 border-transparent pb-1"
+                  }`}
+                >
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="hidden items-center gap-2 md:flex">
+              <button
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 text-neutral-500 transition-all duration-200 hover:border-[#E8472A] hover:text-[#E8472A]"
+                aria-label="Refresh"
+                type="button"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
+                  <path d="M21 12a9 9 0 1 1-2.64-6.36" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M21 3v6h-6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              <button
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 text-neutral-500 transition-all duration-200 hover:border-[#E8472A] hover:text-[#E8472A]"
+                aria-label="Share"
+                type="button"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
+                  <path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M12 3v12" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M8 7l4-4 4 4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              <button
+                aria-label="Open user menu"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-200 text-xs font-semibold text-neutral-700"
+                type="button"
+              >
+                U
+              </button>
+            </div>
+            <button
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 text-neutral-700 transition-all duration-200 hover:border-[#E8472A] hover:text-[#E8472A] md:hidden"
+              aria-label="Open navigation menu"
+              type="button"
+              onClick={() => setMobileMenuOpen((v) => !v)}
+            >
+              ☰
+            </button>
+            <div suppressHydrationWarning>
+              {mounted ? <AuthBar /> : <div className="h-9 w-[120px]" />}
+            </div>
+          </div>
+        </div>
+        {mobileMenuOpen && (
+          <div className="border-t border-neutral-200 bg-white px-6 py-3 md:hidden">
+            <div className="flex flex-col gap-2 text-sm font-medium text-neutral-700">
+              {[
+                { label: "Home", href: "#top" },
+                { label: "Upcoming", href: "#upcoming" },
+                { label: "Explore", href: "#explore" },
+                { label: "Guides", href: "#guides" },
+              ].map((item) => (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  className="rounded-xl px-3 py-2 transition-all duration-200 hover:bg-[#F5EAE6] hover:text-[#E8472A]"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-      <div className="mx-auto w-full max-w-[1280px] px-6 py-4">
+      <div className="mx-auto w-full max-w-[1280px] px-6 py-6">
         <HeroSection query={query} onChange={setQuery} onSubmit={submit} />
       </div>
 
-      <UpcomingTrips trips={upcomingTrips} onPlanNew={submit} onSeeAll={() => router.push("/trips")} />
+      <UpcomingTrips trips={upcomingTrips} onPlanNew={handlePlanNew} onSeeAll={() => router.push("/trips")} />
       <DestinationGrid />
       <HowItWorks />
       <Testimonials />
       <TravelGuides />
-      <FooterCTA onStart={submit} />
+      <FooterCTA onStart={focusHeroSearch} />
+      <SiteFooter />
       <HelpWidget />
     </div>
   );
