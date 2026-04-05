@@ -36,8 +36,12 @@ export function DayBlock({ day, date, theme, activities, dayColorIndex = 0 }: Pr
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 
   useEffect(() => {
-    async function loadRoutes() {
-      if (!token) return;
+    if (!token) return;
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let idleId: number | null = null;
+
+    const loadRoutes = async () => {
       const pairs = activities
         .map((a, idx) => {
           const b = activities[idx + 1];
@@ -46,29 +50,58 @@ export function DayBlock({ day, date, theme, activities, dayColorIndex = 0 }: Pr
         })
         .filter(Boolean) as Array<{ a: Activity; b: Activity }>;
 
-      const results: Record<string, { time: string; distance: string; directions: string }> = {};
-      for (const pair of pairs) {
-        const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${pair.a.lng},${pair.a.lat};${pair.b.lng},${pair.b.lat}?access_token=${token}`;
-        try {
-          const res = await fetch(url);
-          const data = await res.json();
-          const route = data?.routes?.[0];
-          if (route) {
+      if (pairs.length === 0 || cancelled) return;
+
+      const resultsEntries = await Promise.all(
+        pairs.map(async (pair) => {
+          const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${pair.a.lng},${pair.a.lat};${pair.b.lng},${pair.b.lat}?access_token=${token}`;
+          try {
+            const res = await fetch(url);
+            const data = await res.json();
+            const route = data?.routes?.[0];
+            if (!route) return null;
             const seconds = route.duration ?? 0;
             const meters = route.distance ?? 0;
-            results[`${pair.a.id}__${pair.b.id}`] = {
-              time: formatDuration(seconds),
-              distance: formatMiles(meters),
-              directions: `https://www.google.com/maps/dir/?api=1&origin=${pair.a.lat},${pair.a.lng}&destination=${pair.b.lat},${pair.b.lng}`,
-            };
+            return [
+              `${pair.a.id}__${pair.b.id}`,
+              {
+                time: formatDuration(seconds),
+                distance: formatMiles(meters),
+                directions: `https://www.google.com/maps/dir/?api=1&origin=${pair.a.lat},${pair.a.lng}&destination=${pair.b.lat},${pair.b.lng}`,
+              },
+            ] as const;
+          } catch {
+            return null;
           }
-        } catch {
-          // ignore
-        }
+        }),
+      );
+
+      if (cancelled) return;
+      const results: Record<string, { time: string; distance: string; directions: string }> = {};
+      for (const entry of resultsEntries) {
+        if (!entry) continue;
+        results[entry[0]] = entry[1];
       }
       setTravelInfo(results);
+    };
+
+    const start = () => {
+      loadRoutes();
+    };
+
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      idleId = (window as any).requestIdleCallback(start, { timeout: 1500 });
+    } else {
+      timeoutId = setTimeout(start, 600);
     }
-    loadRoutes();
+
+    return () => {
+      cancelled = true;
+      if (idleId && typeof window !== "undefined" && "cancelIdleCallback" in window) {
+        (window as any).cancelIdleCallback(idleId);
+      }
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [activities, token]);
 
   useEffect(() => {

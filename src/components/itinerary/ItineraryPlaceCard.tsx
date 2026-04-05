@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Activity, useTripStore } from "@/store/tripStore";
 
 type Props = {
@@ -18,6 +18,8 @@ export function ItineraryPlaceCard({ activity, index, destination, pinColor }: P
   const [photoUrl, setPhotoUrl] = useState<string | null>(activity.photoUrl ?? null);
   const [photoLoading, setPhotoLoading] = useState<boolean>(true);
   const [expanded, setExpanded] = useState(false);
+  const [shouldLoad, setShouldLoad] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const mapsUrl = useMemo(() => {
     const q = activity.name + (activity.address ? ` ${activity.address}` : "");
@@ -25,7 +27,22 @@ export function ItineraryPlaceCard({ activity, index, destination, pinColor }: P
   }, [activity.name, activity.address]);
 
   useEffect(() => {
-    if (photoUrl) return;
+    if (!cardRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setShouldLoad(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(cardRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!shouldLoad || photoUrl) return;
     let isMounted = true;
     async function load() {
       try {
@@ -61,7 +78,7 @@ export function ItineraryPlaceCard({ activity, index, destination, pinColor }: P
     return () => {
       isMounted = false;
     };
-  }, [activity.name, destination, photoUrl]);
+  }, [activity.name, destination, photoUrl, shouldLoad]);
 
   useEffect(() => {
     setPhotoUrl(activity.photoUrl ?? null);
@@ -70,6 +87,7 @@ export function ItineraryPlaceCard({ activity, index, destination, pinColor }: P
 
   return (
     <div
+      ref={cardRef}
       onClick={() => {
         setExpanded((v) => !v);
         if (hasCoords) setActiveActivityId(isActive ? null : activity.id);
