@@ -13,6 +13,8 @@ export default function TripChatPage() {
   const [chatWidth, setChatWidth] = useState(400);
   const [itineraryWidth, setItineraryWidth] = useState(380);
   const [dragging, setDragging] = useState<null | "left" | "right">(null);
+  const [activeTab, setActiveTab] = useState<"chat" | "map" | "itinerary">("chat");
+  const [isMobile, setIsMobile] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const trip = useTripStore((s) => s.trip);
   const lastQuery = useTripStore((s) => s.lastQuery);
@@ -54,6 +56,13 @@ export default function TripChatPage() {
   }, [dragging, chatCollapsed, itineraryCollapsed, chatWidth, itineraryWidth]);
 
   useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth < 768);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  useEffect(() => {
     if (!trip) return;
     try {
       const key = "wayfarer_recent_trips";
@@ -74,53 +83,91 @@ export default function TripChatPage() {
   }, [trip, lastQuery]);
 
   return (
-    <div ref={containerRef} className="flex h-screen overflow-hidden bg-background">
-      <div
-        className={[
-          "border-r border-panel-border transition-all duration-300 ease-in-out",
-          chatCollapsed ? "w-12 overflow-hidden" : "",
-        ].join(" ")}
-        style={!chatCollapsed ? { width: chatWidth } : undefined}
-      >
-        <ChatPanel
-          isCollapsed={chatCollapsed}
-          onToggle={() => setChatCollapsed((v) => !v)}
+    <div ref={containerRef} className="flex h-screen flex-col overflow-hidden bg-background md:flex-row">
+      {isMobile && (
+        <div className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-panel-border bg-white px-3 py-2 md:hidden">
+          {[
+            { id: "chat", label: "Chat" },
+            { id: "map", label: "Map" },
+            { id: "itinerary", label: "Itinerary" },
+          ].map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id as typeof activeTab)}
+              className={[
+                "flex-1 rounded-full px-3 py-2 text-xs font-semibold transition",
+                activeTab === t.id ? "bg-foreground text-white" : "bg-slate-100 text-foreground/70",
+              ].join(" ")}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {(!isMobile || activeTab === "chat") && (
+        <div
+          className={[
+            "border-r border-panel-border transition-all duration-300 ease-in-out",
+            chatCollapsed ? "w-12 overflow-hidden" : "",
+            isMobile ? "w-full" : "",
+          ].join(" ")}
+          style={!chatCollapsed && !isMobile ? { width: chatWidth } : undefined}
+        >
+          <ChatPanel
+            isCollapsed={chatCollapsed}
+            onToggle={() => setChatCollapsed((v) => !v)}
+          />
+        </div>
+      )}
+
+      {!isMobile && (
+        <div
+          onMouseDown={() => setDragging("left")}
+          className="w-2 cursor-col-resize bg-transparent hover:bg-slate-100"
         />
-      </div>
-      <div
-        onMouseDown={() => setDragging("left")}
-        className="w-2 cursor-col-resize bg-transparent hover:bg-slate-100"
-      />
-      <div
-        className={[
-          "border-r border-panel-border transition-all duration-300 ease-in-out",
-          mapCollapsed ? "w-12 overflow-hidden" : "flex-1",
-        ].join(" ")}
-      >
-        <MapPanel
-          isCollapsed={mapCollapsed}
-          onToggle={() => {
-            if (!mapCollapsed && !canCollapseMap) return;
-            setMapCollapsed((v) => !v);
-          }}
+      )}
+
+      {(!isMobile || activeTab === "map") && (
+        <div
+          className={[
+            "border-r border-panel-border transition-all duration-300 ease-in-out",
+            mapCollapsed ? "w-12 overflow-hidden" : "flex-1",
+            isMobile ? "w-full" : "",
+          ].join(" ")}
+        >
+          <MapPanel
+            isCollapsed={mapCollapsed}
+            onToggle={() => {
+              if (!mapCollapsed && !canCollapseMap) return;
+              setMapCollapsed((v) => !v);
+            }}
+          />
+        </div>
+      )}
+
+      {!isMobile && (
+        <div
+          onMouseDown={() => setDragging("right")}
+          className="w-2 cursor-col-resize bg-transparent hover:bg-slate-100"
         />
-      </div>
-      <div
-        onMouseDown={() => setDragging("right")}
-        className="w-2 cursor-col-resize bg-transparent hover:bg-slate-100"
-      />
-      <div
-        className={[
-          "transition-all duration-300 ease-in-out",
-          itineraryCollapsed ? "w-12 overflow-hidden" : "",
-        ].join(" ")}
-        style={!itineraryCollapsed ? { width: itineraryWidth } : undefined}
-      >
-        <ItineraryPanel
-          isCollapsed={itineraryCollapsed}
-          onToggle={() => setItineraryCollapsed((v) => !v)}
-        />
-      </div>
+      )}
+
+      {(!isMobile || activeTab === "itinerary") && (
+        <div
+          className={[
+            "transition-all duration-300 ease-in-out",
+            itineraryCollapsed ? "w-12 overflow-hidden" : "",
+            isMobile ? "w-full" : "",
+          ].join(" ")}
+          style={!itineraryCollapsed && !isMobile ? { width: itineraryWidth } : undefined}
+        >
+          <ItineraryPanel
+            isCollapsed={itineraryCollapsed}
+            onToggle={() => setItineraryCollapsed((v) => !v)}
+          />
+        </div>
+      )}
     </div>
   );
 }
