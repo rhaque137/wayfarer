@@ -89,10 +89,15 @@ export function DayBlock({ day, date, theme, activities, dayColorIndex = 0 }: Pr
     }
   }, [totalDays, isMobile]);
 
+  const showContent = isMobile ? true : !collapsed;
+
   return (
     <div className="rounded-lg border border-green-200 bg-green-50 p-3">
       <button
-        onClick={() => setCollapsed((v) => !v)}
+        onClick={() => {
+          if (isMobile) return;
+          setCollapsed((v) => !v);
+        }}
         className="mb-2 flex w-full items-center justify-between text-left"
       >
         <span className="flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
@@ -113,9 +118,9 @@ export function DayBlock({ day, date, theme, activities, dayColorIndex = 0 }: Pr
           {date && <span className="text-xs text-muted">{date}</span>}
           {theme && <div className="text-xs text-teal-600 font-medium">{theme}</div>}
         </div>
-        <span className="ml-3 text-xs text-muted">{collapsed ? "▸" : "▾"}</span>
+        {!isMobile && <span className="ml-3 text-xs text-muted">{collapsed ? "▸" : "▾"}</span>}
       </button>
-      {!collapsed && (
+      {showContent && (
         <ul className="space-y-4">
         {activities.map((act, index) => {
           const next = activities[index + 1];
