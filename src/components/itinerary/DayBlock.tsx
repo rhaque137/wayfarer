@@ -72,7 +72,8 @@ export function DayBlock({ day, date, theme, activities, dayColorIndex = 0 }: Pr
 
   useEffect(() => {
     if (!defaultedRef.current) {
-      setCollapsed(totalDays > 3);
+      const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+      setCollapsed(totalDays > 3 && !isMobile);
       defaultedRef.current = true;
     }
   }, [totalDays]);
