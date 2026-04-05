@@ -83,7 +83,7 @@ export default function TripChatPage() {
   }, [trip, lastQuery]);
 
   return (
-    <div ref={containerRef} className="flex h-screen flex-col overflow-hidden bg-background md:flex-row">
+    <div ref={containerRef} className="flex h-dvh flex-col overflow-hidden bg-background md:flex-row">
       {isMobile && (
         <div className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-panel-border bg-white px-3 py-2 md:hidden">
           {[
@@ -110,7 +110,7 @@ export default function TripChatPage() {
           className={[
             "border-r border-panel-border transition-all duration-300 ease-in-out",
             chatCollapsed ? "w-12 overflow-hidden" : "",
-            isMobile ? "w-full" : "",
+            isMobile ? "w-full flex-1 min-h-0" : "",
           ].join(" ")}
           style={!chatCollapsed && !isMobile ? { width: chatWidth } : undefined}
         >
@@ -133,7 +133,7 @@ export default function TripChatPage() {
           className={[
             "border-r border-panel-border transition-all duration-300 ease-in-out",
             mapCollapsed ? "w-12 overflow-hidden" : "flex-1",
-            isMobile ? "w-full" : "",
+            isMobile ? "w-full flex-1 min-h-0" : "",
           ].join(" ")}
         >
           <MapPanel
@@ -158,7 +158,7 @@ export default function TripChatPage() {
           className={[
             "transition-all duration-300 ease-in-out",
             itineraryCollapsed ? "w-12 overflow-hidden" : "",
-            isMobile ? "w-full" : "",
+            isMobile ? "w-full flex-1 min-h-0" : "",
           ].join(" ")}
           style={!itineraryCollapsed && !isMobile ? { width: itineraryWidth } : undefined}
         >
