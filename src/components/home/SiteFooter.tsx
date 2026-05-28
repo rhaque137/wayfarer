@@ -12,47 +12,6 @@ export function SiteFooter() {
             <p className="mt-2 text-sm text-neutral-500">
               Premium AI travel planning for people who want every detail curated.
             </p>
-            <div className="mt-4 flex items-center gap-4 text-sm text-neutral-500">
-              <a
-                className="flex items-center gap-2 transition-all duration-200 hover:text-[#E8472A]"
-                href="https://www.instagram.com"
-                aria-label="Follow Wayfarer on Instagram"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
-                  <rect x="3" y="3" width="18" height="18" rx="5" />
-                  <circle cx="12" cy="12" r="4" />
-                  <circle cx="17" cy="7" r="1" />
-                </svg>
-                Instagram
-              </a>
-              <a
-                className="flex items-center gap-2 transition-all duration-200 hover:text-[#E8472A]"
-                href="https://x.com"
-                aria-label="Follow Wayfarer on X"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
-                  <path d="M4 4l16 16M20 4L4 20" />
-                </svg>
-                X
-              </a>
-              <a
-                className="flex items-center gap-2 transition-all duration-200 hover:text-[#E8472A]"
-                href="https://www.linkedin.com"
-                aria-label="Follow Wayfarer on LinkedIn"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <path d="M8 10v7M8 7h.01M12 10v7M12 13.5c0-1.9 2.5-2.1 2.5 0V17" />
-                </svg>
-                LinkedIn
-              </a>
-            </div>
           </div>
           {[
             {

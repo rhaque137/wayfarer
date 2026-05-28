@@ -27,6 +27,9 @@ export function HowItWorks() {
         <Reveal>
           <div className="text-2xl font-semibold text-neutral-900">How it works</div>
           <div className="mt-2 text-sm text-neutral-500">Three steps to a ready‑to‑go itinerary.</div>
+          <div className="mt-2 text-xs text-neutral-500">
+            Itineraries are AI-generated suggestions. Always verify details before booking.
+          </div>
         </Reveal>
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">

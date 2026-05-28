@@ -113,6 +113,9 @@ export function HeroSection({
             >
               Plan My Trip →
             </button>
+            <div className="text-center text-xs font-medium text-neutral-500">
+              Free to use — no credit card required.
+            </div>
           </div>
         </div>
 
