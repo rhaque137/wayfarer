@@ -3,6 +3,7 @@
 import mapboxgl from "mapbox-gl";
 import { useEffect, useMemo, useRef } from "react";
 import { env } from "@/lib/env";
+import { useMapboxCss } from "@/lib/mapbox-css";
 
 export type TripPin = {
   id: string;
@@ -24,6 +25,7 @@ export function TripMap({
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const token = env.client.NEXT_PUBLIC_MAPBOX_TOKEN ?? process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  useMapboxCss(Boolean(token));
 
   const center = useMemo(() => {
     if (!pins.length) return { lat: 53.3498, lon: -6.2603 }; // Dublin fallback

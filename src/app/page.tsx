@@ -1,17 +1,32 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { HeroSection } from "@/components/home/HeroSection";
-import { UpcomingTrips } from "@/components/home/UpcomingTrips";
-import { DestinationGrid } from "@/components/home/DestinationGrid";
-import { HowItWorks } from "@/components/home/HowItWorks";
-import { Testimonials } from "@/components/home/Testimonials";
-import { TravelGuides } from "@/components/home/TravelGuides";
 import { FooterCTA } from "@/components/home/FooterCTA";
 import { HelpWidget } from "@/components/home/HelpWidget";
-import { AuthBar } from "@/components/home/AuthBar";
 import { SiteFooter } from "@/components/home/SiteFooter";
+
+const AuthBar = dynamic(() => import("@/components/home/AuthBar").then((mod) => mod.AuthBar), {
+  ssr: false,
+  loading: () => <div className="h-9 w-[120px]" />,
+});
+const UpcomingTrips = dynamic(() => import("@/components/home/UpcomingTrips").then((mod) => mod.UpcomingTrips), {
+  ssr: false,
+});
+const DestinationGrid = dynamic(() => import("@/components/home/DestinationGrid").then((mod) => mod.DestinationGrid), {
+  ssr: false,
+});
+const HowItWorks = dynamic(() => import("@/components/home/HowItWorks").then((mod) => mod.HowItWorks), {
+  ssr: false,
+});
+const Testimonials = dynamic(() => import("@/components/home/Testimonials").then((mod) => mod.Testimonials), {
+  ssr: false,
+});
+const TravelGuides = dynamic(() => import("@/components/home/TravelGuides").then((mod) => mod.TravelGuides), {
+  ssr: false,
+});
 
 type RecentTrip = { id: string; name: string; destination: string; coverImage?: string; query?: string };
 const RECENT_IMAGE_OVERRIDES: Record<string, string> = {

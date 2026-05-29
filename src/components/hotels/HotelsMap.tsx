@@ -3,6 +3,7 @@
 import mapboxgl from "mapbox-gl";
 import { useEffect, useMemo, useRef } from "react";
 import { env } from "@/lib/env";
+import { useMapboxCss } from "@/lib/mapbox-css";
 
 type Pin = { id: string; name: string; lat: number; lon: number };
 
@@ -11,6 +12,7 @@ export function HotelsMap({ pins }: { pins: Pin[] }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const token = env.client.NEXT_PUBLIC_MAPBOX_TOKEN ?? process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  useMapboxCss(Boolean(token));
 
   const center = useMemo(() => {
     if (!pins.length) return { lat: 38.7223, lon: -9.1393 }; // Lisbon fallback
@@ -79,4 +81,3 @@ export function HotelsMap({ pins }: { pins: Pin[] }) {
 
   return <div ref={containerRef} className="h-[420px] w-full" />;
 }
-

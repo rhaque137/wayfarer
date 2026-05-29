@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import { useTripStore } from "@/store/tripStore";
 import { PanelHeader } from "@/components/ui/PanelHeader";
+import { useMapboxCss } from "@/lib/mapbox-css";
 
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 const DAY_COLORS = ["#E8472A", "#7C4DFF", "#FF4DB1", "#F4A261", "#2A9D8F", "#E76F51"];
@@ -85,6 +86,7 @@ export function MapPanel({
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const { trip, activeActivityId, setActiveActivityId } = useTripStore();
+  useMapboxCss(Boolean(TOKEN) && !isCollapsed);
   const selectIndex = useCallback(
     (idx: number | null) => {
       if (idx == null) {
