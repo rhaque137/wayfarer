@@ -58,7 +58,7 @@ export async function GET(req: Request) {
     }
 
     return Response.json({ success: false, error: "Unsupported type" }, { status: 400 });
-  } catch (err) {
+  } catch {
     return Response.json({ success: false, error: "Proxy error" }, { status: 500 });
   }
 }

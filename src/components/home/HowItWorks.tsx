@@ -1,6 +1,7 @@
 "use client";
 
 import { Reveal } from "@/components/home/Reveal";
+import { Tilt3D } from "@/components/ui/3d-card";
 
 const steps = [
   {
@@ -35,11 +36,13 @@ export function HowItWorks() {
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           {steps.map((step, idx) => (
             <Reveal key={step.title} delay={idx * 120}>
-              <div className="rounded-2xl bg-[#F5F0EB] p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-                <div className="text-3xl">{step.icon}</div>
-                <div className="mt-3 text-base font-semibold text-neutral-900">{step.title}</div>
-                <div className="mt-2 text-sm text-neutral-600">{step.description}</div>
-              </div>
+              <Tilt3D>
+                <div className="rounded-2xl bg-[#F5F0EB] p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                  <div className="text-3xl">{step.icon}</div>
+                  <div className="mt-3 text-base font-semibold text-neutral-900">{step.title}</div>
+                  <div className="mt-2 text-sm text-neutral-600">{step.description}</div>
+                </div>
+              </Tilt3D>
             </Reveal>
           ))}
         </div>

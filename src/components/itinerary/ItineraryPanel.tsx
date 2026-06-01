@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { PanelHeader } from "@/components/ui/PanelHeader";
 import { AIChangesBanner } from "@/components/itinerary/AIChangesBanner";
 import { DayBlock } from "@/components/itinerary/DayBlock";
@@ -34,13 +35,13 @@ export function ItineraryPanel({
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="border-b border-neutral-200 bg-white/80 px-4 py-3 backdrop-blur">
         <div className="flex items-center gap-3">
-          <a
+          <Link
             href="/"
             className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-semibold text-neutral-700 transition-all duration-200 hover:border-[#E8472A] hover:text-[#E8472A]"
             aria-label="Back to home"
           >
             Home
-          </a>
+          </Link>
           <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
             <span className="text-neutral-500">⭐</span>
             Itinerary

@@ -7,6 +7,8 @@ import { HeroSection } from "@/components/home/HeroSection";
 import { FooterCTA } from "@/components/home/FooterCTA";
 import { HelpWidget } from "@/components/home/HelpWidget";
 import { SiteFooter } from "@/components/home/SiteFooter";
+import { PLACEHOLDER_IMAGE, getDestinationImage } from "@/lib/destination-images";
+import { CREATE_TRIP_ERROR_MESSAGE, MAX_TRIP_PROMPT_LENGTH } from "@/lib/trip-limits";
 
 const AuthBar = dynamic(() => import("@/components/home/AuthBar").then((mod) => mod.AuthBar), {
   ssr: false,
@@ -30,8 +32,7 @@ const TravelGuides = dynamic(() => import("@/components/home/TravelGuides").then
 
 type RecentTrip = { id: string; name: string; destination: string; coverImage?: string; query?: string };
 const RECENT_IMAGE_OVERRIDES: Record<string, string> = {
-  paris:
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg/330px-La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg",
+  paris: getDestinationImage("Paris")?.url ?? PLACEHOLDER_IMAGE.url,
 };
 
 export default function Home() {
@@ -40,18 +41,37 @@ export default function Home() {
   const [recentImages, setRecentImages] = useState<Record<string, string>>({});
   const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isCreatingTrip, setIsCreatingTrip] = useState(false);
+  const [createTripError, setCreateTripError] = useState<string | null>(null);
   const router = useRouter();
 
   const submit = async () => {
-    if (!query.trim()) return;
-    const res = await fetch("/api/create-trip", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ query }),
-    });
-    const data = await res.json();
-    if (res.ok && data?.id) {
-      router.push(`/trip/${data.id}/chat/main?q=${encodeURIComponent(query)}`);
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery || isCreatingTrip) return;
+    if (trimmedQuery.length > MAX_TRIP_PROMPT_LENGTH) {
+      setCreateTripError(`Keep your trip prompt under ${MAX_TRIP_PROMPT_LENGTH} characters.`);
+      return;
+    }
+
+    setIsCreatingTrip(true);
+    setCreateTripError(null);
+
+    try {
+      const res = await fetch("/api/create-trip", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ query: trimmedQuery }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.id) {
+        router.push(`/trip/${data.id}/chat/main?q=${encodeURIComponent(trimmedQuery)}`);
+        return;
+      }
+      setCreateTripError(CREATE_TRIP_ERROR_MESSAGE);
+    } catch {
+      setCreateTripError(CREATE_TRIP_ERROR_MESSAGE);
+    } finally {
+      setIsCreatingTrip(false);
     }
   };
 
@@ -133,7 +153,8 @@ export default function Home() {
         coverImage:
           recentImages[trip.id] ??
           RECENT_IMAGE_OVERRIDES[(trip.destination.split(",")[0]?.trim() || trip.destination).toLowerCase()] ??
-          `https://picsum.photos/seed/${encodeURIComponent(cityOnly)}/800/600`,
+          getDestinationImage(cityOnly)?.url ??
+          PLACEHOLDER_IMAGE.url,
         dates: ["May 12–17", "Jun 3–8", "Jul 22–29", "Sep 5–10"][idx % 4],
         savedCount: [12, 8, 15, 6][idx % 4],
         countdown: ["Next week", "In 3 months", "In 5 months", "Soon"][idx % 4],
@@ -168,36 +189,6 @@ export default function Home() {
             </nav>
           </div>
           <div className="flex items-center gap-3">
-            <div className="hidden items-center gap-2 md:flex">
-              <button
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 text-neutral-500 transition-all duration-200 hover:border-[#E8472A] hover:text-[#E8472A]"
-                aria-label="Refresh"
-                type="button"
-              >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
-                  <path d="M21 12a9 9 0 1 1-2.64-6.36" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M21 3v6h-6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-              <button
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 text-neutral-500 transition-all duration-200 hover:border-[#E8472A] hover:text-[#E8472A]"
-                aria-label="Share"
-                type="button"
-              >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
-                  <path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M12 3v12" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M8 7l4-4 4 4" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-              <button
-                aria-label="Open user menu"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-200 text-xs font-semibold text-neutral-700"
-                type="button"
-              >
-                U
-              </button>
-            </div>
             <button
               className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 text-neutral-700 transition-all duration-200 hover:border-[#E8472A] hover:text-[#E8472A] md:hidden"
               aria-label="Open navigation menu"
@@ -234,7 +225,14 @@ export default function Home() {
         )}
       </div>
       <div className="mx-auto w-full max-w-[1280px] px-6 py-6">
-        <HeroSection query={query} onChange={setQuery} onSubmit={submit} />
+        <HeroSection
+          query={query}
+          onChange={setQuery}
+          onSubmit={submit}
+          isSubmitting={isCreatingTrip}
+          error={createTripError}
+          maxLength={MAX_TRIP_PROMPT_LENGTH}
+        />
       </div>
 
       <UpcomingTrips trips={upcomingTrips} onPlanNew={handlePlanNew} onSeeAll={() => router.push("/trips")} />

@@ -1,7 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PLACEHOLDER_IMAGE, getDestinationImage } from "@/lib/destination-images";
+import { CREATE_TRIP_ERROR_MESSAGE } from "@/lib/trip-limits";
+import { useImageFallback } from "@/lib/use-image-fallback";
 
 const itineraries: Record<
   string,
@@ -123,8 +126,38 @@ const itineraries: Record<
 
 export default function DestinationPage({ params }: { params: { slug: string } }) {
   const router = useRouter();
+  useImageFallback();
+  const [isCreatingTrip, setIsCreatingTrip] = useState(false);
+  const [createTripError, setCreateTripError] = useState<string | null>(null);
   const slug = params.slug;
   const data = useMemo(() => itineraries[slug] ?? { name: slug, days: [] }, [slug]);
+  const destinationImage = getDestinationImage(data.name) ?? PLACEHOLDER_IMAGE;
+
+  const createTrip = async () => {
+    if (isCreatingTrip) return;
+    const query = `Trip to ${data.name}`;
+
+    setIsCreatingTrip(true);
+    setCreateTripError(null);
+
+    try {
+      const res = await fetch("/api/create-trip", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      const dataRes = await res.json().catch(() => null);
+      if (res.ok && dataRes?.id) {
+        router.push(`/trip/${dataRes.id}/chat/main?q=${encodeURIComponent(query)}`);
+        return;
+      }
+      setCreateTripError(CREATE_TRIP_ERROR_MESSAGE);
+    } catch {
+      setCreateTripError(CREATE_TRIP_ERROR_MESSAGE);
+    } finally {
+      setIsCreatingTrip(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background px-6 py-12">
@@ -134,11 +167,12 @@ export default function DestinationPage({ params }: { params: { slug: string } }
         </button>
         <div className="mt-4 overflow-hidden rounded-3xl border border-panel-border bg-white shadow-sm">
           <img
-            src={`https://source.unsplash.com/1200x600/?${encodeURIComponent(data.name)},travel`}
-            alt={data.name}
+            data-destination-image
+            src={destinationImage.url}
+            alt={destinationImage.alt}
             className="h-72 w-full object-cover"
             onError={(e) => {
-              e.currentTarget.src = `https://picsum.photos/seed/${encodeURIComponent(data.name)}/1200/600`;
+              e.currentTarget.src = PLACEHOLDER_IMAGE.url;
             }}
           />
           <div className="p-6">
@@ -158,22 +192,13 @@ export default function DestinationPage({ params }: { params: { slug: string } }
                 </div>
               ))}
             </div>
+            {createTripError ? <div className="mt-5 text-sm font-semibold text-[#E8472A]">{createTripError}</div> : null}
             <button
-              onClick={async () => {
-                const query = `Trip to ${data.name}`;
-                const res = await fetch("/api/create-trip", {
-                  method: "POST",
-                  headers: { "content-type": "application/json" },
-                  body: JSON.stringify({ query }),
-                });
-                const dataRes = await res.json();
-                if (res.ok && dataRes?.id) {
-                  router.push(`/trip/${dataRes.id}/chat/main?q=${encodeURIComponent(query)}`);
-                }
-              }}
+              onClick={() => void createTrip()}
+              disabled={isCreatingTrip}
               className="mt-6 rounded-full bg-foreground px-5 py-2 text-sm font-semibold text-white"
             >
-              Start Planning This Trip →
+              {isCreatingTrip ? "Planning..." : "Start Planning This Trip →"}
             </button>
           </div>
         </div>

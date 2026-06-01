@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { MapPanel } from "@/components/map/MapPanel";
@@ -67,7 +68,7 @@ export default function TripChatPage() {
     try {
       const key = "wayfarer_recent_trips";
       const raw = localStorage.getItem(key);
-      const list = raw ? (JSON.parse(raw) as Array<any>) : [];
+      const list = raw ? (JSON.parse(raw) as Array<{ id: string }>) : [];
       const entry = {
         id: trip.id,
         name: trip.name,
@@ -86,13 +87,13 @@ export default function TripChatPage() {
     <div ref={containerRef} className="flex h-dvh flex-col overflow-hidden bg-[#F5F0EB] md:flex-row">
       {isMobile && (
         <div className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-neutral-200 bg-[#FAF7F3] px-4 py-3 md:hidden">
-          <a
+          <Link
             href="/"
             className="text-sm font-bold text-neutral-900"
             aria-label="Back to home"
           >
             Wayfarer AI
-          </a>
+          </Link>
           <div className="flex items-center gap-2 text-neutral-500">
             <button className="h-8 w-8 rounded-full border border-neutral-200 bg-white text-xs">⟲</button>
             <button className="h-8 w-8 rounded-full border border-neutral-200 bg-white text-xs">⤴︎</button>

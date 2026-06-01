@@ -68,6 +68,66 @@ class LightZoomControl implements mapboxgl.IControl {
   }
 }
 
+function normalizeCoords<T extends { lat?: number; lng?: number }>(act: T): T {
+  const source = act as T & {
+    latitude?: number | string;
+    longitude?: number | string;
+    location?: {
+      lat?: number | string;
+      lng?: number | string;
+      latitude?: number | string;
+      longitude?: number | string;
+    };
+    coordinates?: [number | string, number | string];
+  };
+  const fallbackLat = source.latitude ?? source.location?.lat ?? source.location?.latitude;
+  const fallbackLng = source.longitude ?? source.location?.lng ?? source.location?.longitude;
+  const coords = Array.isArray(source.coordinates) ? source.coordinates : null;
+  const rawLat = act.lat ?? fallbackLat ?? (coords ? coords[1] : undefined);
+  const rawLng = act.lng ?? fallbackLng ?? (coords ? coords[0] : undefined);
+  const lat = typeof rawLat === "string" ? Number(rawLat) : rawLat;
+  const lng = typeof rawLng === "string" ? Number(rawLng) : rawLng;
+  if (lat == null || lng == null || Number.isNaN(lat) || Number.isNaN(lng)) {
+    return { ...act, lat: undefined, lng: undefined };
+  }
+  if (Math.abs(lat) > 90 && Math.abs(lng) <= 90) {
+    return { ...act, lat: lng, lng: lat };
+  }
+  if (Math.abs(lng) > 180 || Math.abs(lat) > 90) {
+    return { ...act, lat: undefined, lng: undefined };
+  }
+  return { ...act, lat, lng };
+}
+
+function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const toRad = (v: number) => (v * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function dedupeActivities<T extends { id?: string; name?: string; lat?: number; lng?: number }>(items: T[]) {
+  const groups = new Map<string, { item: T; ids: string[] }>();
+  for (const item of items) {
+    if (item.lat == null || item.lng == null) continue;
+    const nameKey = (item.name ?? "").toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
+    const coordKey = `${item.lat.toFixed(4)}|${item.lng.toFixed(4)}`;
+    const key = nameKey || coordKey;
+    const id = item.id ?? coordKey;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.ids.push(id);
+    } else {
+      groups.set(key, { item, ids: [id] });
+    }
+  }
+  return Array.from(groups.values()).map((g) => ({ ...g.item, _groupIds: g.ids }));
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 export function MapPanel({
   isCollapsed = false,
@@ -109,10 +169,6 @@ export function MapPanel({
     },
     [selectIndex]
   );
-
-  if (isCollapsed) {
-    return <PanelHeader icon="🗺" label="Map" isCollapsed onToggle={onToggle} />;
-  }
 
   // ── Init / teardown map ───────────────────────────────────────────────────
   useEffect(() => {
@@ -320,58 +376,6 @@ export function MapPanel({
     }
   }, [trip, clearMarkers, setActiveActivityId, isCollapsed, selectById]);
 
-  // Normalize coords: swap if lat/lng look flipped, drop invalid values
-  function normalizeCoords<T extends { lat?: number; lng?: number }>(act: T): T {
-    const fallbackLat = (act as any).latitude ?? (act as any).location?.lat ?? (act as any).location?.latitude;
-    const fallbackLng = (act as any).longitude ?? (act as any).location?.lng ?? (act as any).location?.longitude;
-    const coords = Array.isArray((act as any).coordinates) ? (act as any).coordinates : null;
-    const rawLat = act.lat ?? fallbackLat ?? (coords ? coords[1] : undefined);
-    const rawLng = act.lng ?? fallbackLng ?? (coords ? coords[0] : undefined);
-    const lat = typeof rawLat === "string" ? Number(rawLat) : rawLat;
-    const lng = typeof rawLng === "string" ? Number(rawLng) : rawLng;
-    if (lat == null || lng == null || Number.isNaN(lat) || Number.isNaN(lng)) {
-      return { ...act, lat: undefined, lng: undefined };
-    }
-    // If lat out of range but lng looks like lat, swap
-    if (Math.abs(lat) > 90 && Math.abs(lng) <= 90) {
-      return { ...act, lat: lng, lng: lat };
-    }
-    // If lng out of range, drop
-    if (Math.abs(lng) > 180 || Math.abs(lat) > 90) {
-      return { ...act, lat: undefined, lng: undefined };
-    }
-    return { ...act, lat, lng };
-  }
-
-  function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
-    const toRad = (v: number) => (v * Math.PI) / 180;
-    const R = 6371;
-    const dLat = toRad(lat2 - lat1);
-    const dLng = toRad(lng2 - lng1);
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-    return 2 * R * Math.asin(Math.sqrt(a));
-  }
-
-  function dedupeActivities<T extends { id?: string; name?: string; lat?: number; lng?: number }>(items: T[]) {
-    const groups = new Map<string, { item: T; ids: string[] }>();
-    for (const item of items) {
-      if (item.lat == null || item.lng == null) continue;
-      const nameKey = (item.name ?? "").toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
-      const coordKey = `${item.lat.toFixed(4)}|${item.lng.toFixed(4)}`;
-      const key = nameKey || coordKey;
-      const id = item.id ?? coordKey;
-      const existing = groups.get(key);
-      if (existing) {
-        existing.ids.push(id);
-      } else {
-        groups.set(key, { item, ids: [id] });
-      }
-    }
-    return Array.from(groups.values()).map((g) => ({ ...g.item, _groupIds: g.ids }));
-  }
-
   // ── React to active activity (itinerary click → fly map) ─────────────────
   useEffect(() => {
     if (isCollapsed) return;
@@ -401,6 +405,10 @@ export function MapPanel({
       }
     });
   }, [activeActivityId, isCollapsed]);
+
+  if (isCollapsed) {
+    return <PanelHeader icon="🗺" label="Map" isCollapsed onToggle={onToggle} />;
+  }
 
   if (!TOKEN) {
     return (

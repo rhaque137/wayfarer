@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import { PLACEHOLDER_IMAGE, getDestinationImage } from "@/lib/destination-images";
+import { useImageFallback } from "@/lib/use-image-fallback";
 
 const prompts = [
   "Plan a 7-day adventure in Japan on a budget...",
@@ -16,13 +18,19 @@ export function HeroSection({
   query,
   onChange,
   onSubmit,
+  isSubmitting = false,
+  error,
+  maxLength,
 }: {
   query: string;
   onChange: (v: string) => void;
   onSubmit: () => void;
+  isSubmitting?: boolean;
+  error?: string | null;
+  maxLength?: number;
 }) {
   const [promptIndex, setPromptIndex] = useState(0);
-  const [heroImages, setHeroImages] = useState<string[]>([]);
+  useImageFallback();
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -31,53 +39,29 @@ export function HeroSection({
     return () => window.clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const next: string[] = [];
-      await Promise.all(
-        heroCities.map(async (city, idx) => {
-          try {
-            const res = await fetch("/api/place-photo", {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ placeName: city, city }),
-            });
-            const data = await res.json();
-            const url = typeof data?.photoUrl === "string" ? data.photoUrl : null;
-            next[idx] = url ?? `https://picsum.photos/seed/hero-${encodeURIComponent(city)}/800/600`;
-          } catch {
-            next[idx] = `https://picsum.photos/seed/hero-${encodeURIComponent(city)}/800/600`;
-          }
-        }),
-      );
-      if (!cancelled) setHeroImages(next);
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const placeholder = useMemo(() => prompts[promptIndex], [promptIndex]);
+  const heroImages = useMemo(
+    () => heroCities.map((city) => getDestinationImage(city) ?? PLACEHOLDER_IMAGE),
+    [],
+  );
 
   return (
     <section className="relative overflow-hidden rounded-3xl border border-neutral-200 bg-black/5 shadow-sm">
       <div className="absolute inset-0">
         <div className="grid h-full w-full grid-cols-2 md:grid-cols-3">
-          {(heroImages.length ? heroImages : heroCities.map((city) => `https://picsum.photos/seed/hero-${encodeURIComponent(city)}/800/600`)).map((src, idx) => (
-            <div key={src} className={cn("relative overflow-hidden", idx >= 4 && "hidden md:block")}>
+          {heroImages.map((image, idx) => (
+            <div key={image.url} className={cn("relative overflow-hidden", idx >= 4 && "hidden md:block")}>
               <img
-                src={src}
-                alt=""
-                role="presentation"
+                data-destination-image
+                src={image.url}
+                alt={image.alt}
                 className={cn(
                   "h-full w-full object-cover opacity-90",
                   "animate-kenburns",
                 )}
                 style={{ animationDelay: `${idx * 1.2}s` }}
                 onError={(e) => {
-                  e.currentTarget.src = `https://picsum.photos/seed/hero-${idx}/800/600`;
+                  e.currentTarget.src = PLACEHOLDER_IMAGE.url;
                 }}
               />
             </div>
@@ -105,14 +89,17 @@ export function HeroSection({
               onChange={(e) => onChange(e.target.value)}
               placeholder={placeholder}
               aria-label="Trip search"
+              maxLength={maxLength}
               className="h-[76px] w-full rounded-2xl border border-neutral-200 bg-white px-5 text-base text-foreground outline-none transition-all duration-200 placeholder:text-neutral-400 focus:border-[#E8472A] focus:ring-4 focus:ring-[#E8472A]/15 md:h-[64px]"
             />
             <button
               onClick={onSubmit}
+              disabled={isSubmitting || !query.trim()}
               className="h-[60px] w-full rounded-xl bg-foreground text-base font-semibold text-white transition-all duration-200 hover:opacity-90 md:h-[54px]"
             >
-              Plan My Trip →
+              {isSubmitting ? "Planning..." : "Plan My Trip →"}
             </button>
+            {error ? <div className="text-center text-xs font-semibold text-[#E8472A]">{error}</div> : null}
             <div className="text-center text-xs font-medium text-neutral-500">
               Free to use — no credit card required.
             </div>

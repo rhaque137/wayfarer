@@ -188,7 +188,7 @@ export function ChatPanel({
         {displayMessages.length === 0 && (
           <div className="space-y-4">
             <div className="rounded-2xl border border-neutral-200 bg-white p-4 text-sm text-neutral-600 shadow-sm">
-              Try: <span className="text-neutral-900">"4 days in Kyoto for 2 people, love temples and food"</span>
+              Try: <span className="text-neutral-900">&quot;4 days in Kyoto for 2 people, love temples and food&quot;</span>
             </div>
             <QuickActions actions={quickActions} onAction={(prompt) => sendMessage({ text: prompt })} />
           </div>

@@ -1,10 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getDestinationImage } from "@/lib/destination-images";
 
 type PhotoResult = { success: boolean; photoUrl: string | null; source?: string };
 
 const USER_AGENT = "MyTravelItineraryApp/1.0 (https://yourdomain.com; contact@yourdomain.com)";
 const CACHE_TTL_MS = 1000 * 60 * 60 * 6;
 const cache = new Map<string, { value: PhotoResult; expires: number }>();
+const REJECT_TERMS = [
+  "flag",
+  "map",
+  "locator",
+  "emblem",
+  "seal",
+  "logo",
+  "coat_of_arms",
+  "coat of arms",
+  "portrait",
+  "person",
+  "render",
+  "diagram",
+  ".svg",
+  "mayor",
+  "government",
+  "symbol",
+  "icon",
+  "stamp",
+  "currency",
+  "banknote",
+];
+const PREFERRED_TERMS = [
+  "skyline",
+  "panorama",
+  "landscape",
+  "landmark",
+  "city",
+  "view",
+  "aerial",
+  "downtown",
+  "beach",
+  "temple",
+  "cathedral",
+  "mountain",
+  "harbor",
+  "harbour",
+  "street",
+  "architecture",
+];
+
+function isRejected(value: string) {
+  const lower = value.toLowerCase();
+  return REJECT_TERMS.some((term) => lower.includes(term));
+}
+
+function scoreTitle(title: string) {
+  const lower = title.toLowerCase();
+  return PREFERRED_TERMS.reduce((score, term) => score + (lower.includes(term) ? 1 : 0), 0);
+}
 
 export async function POST(req: NextRequest) {
   let body: any;
@@ -21,6 +72,11 @@ export async function POST(req: NextRequest) {
 
   const query = [placeName, city].filter(Boolean).join(" ");
   const cacheKey = query.toLowerCase();
+  const registryImage = getDestinationImage(String(city || placeName));
+  if (registryImage) {
+    return NextResponse.json<PhotoResult>({ success: true, photoUrl: registryImage.url, source: "registry" });
+  }
+
   const cached = cache.get(cacheKey);
   if (cached && cached.expires > Date.now()) {
     return NextResponse.json<PhotoResult>(cached.value);
@@ -31,7 +87,7 @@ export async function POST(req: NextRequest) {
     searchUrl.searchParams.set("action", "query");
     searchUrl.searchParams.set("list", "search");
     searchUrl.searchParams.set("srsearch", query);
-    searchUrl.searchParams.set("srlimit", "3");
+    searchUrl.searchParams.set("srlimit", "8");
     searchUrl.searchParams.set("format", "json");
     searchUrl.searchParams.set("origin", "*");
 
@@ -40,37 +96,19 @@ export async function POST(req: NextRequest) {
       headers: { "User-Agent": USER_AGENT },
     });
     const searchData = await searchRes.json().catch(() => ({}));
-    const pageTitle =
-      (searchData?.query?.search?.[0]?.title as string | undefined) ?? (placeName as string);
+    const searchResults = Array.isArray(searchData?.query?.search) ? searchData.query.search : [];
+    const pageTitle = searchResults
+      .map((result: { title?: string }) => result.title)
+      .filter((title: string | undefined): title is string => Boolean(title))
+      .filter((title: string) => !isRejected(title))
+      .sort((a: string, b: string) => scoreTitle(b) - scoreTitle(a))[0];
 
     if (pageTitle) {
-      const originalUrl = new URL("https://en.wikipedia.org/w/api.php");
-      originalUrl.searchParams.set("action", "query");
-      originalUrl.searchParams.set("titles", pageTitle);
-      originalUrl.searchParams.set("prop", "pageimages");
-      originalUrl.searchParams.set("piprop", "original");
-      originalUrl.searchParams.set("format", "json");
-      originalUrl.searchParams.set("origin", "*");
-
-      const originalRes = await fetch(originalUrl, {
-        cache: "no-store",
-        headers: { "User-Agent": USER_AGENT },
-      });
-      const originalData = await originalRes.json().catch(() => ({}));
-      const pages = originalData?.query?.pages ?? {};
-      const firstPage = pages[Object.keys(pages)[0]] as any;
-      const original = firstPage?.original?.source as string | undefined;
-      if (original) {
-        const value = { success: true, photoUrl: original, source: "wikipedia" };
-        cache.set(cacheKey, { value, expires: Date.now() + CACHE_TTL_MS });
-        return NextResponse.json<PhotoResult>(value);
-      }
-
       const thumbUrl = new URL("https://en.wikipedia.org/w/api.php");
       thumbUrl.searchParams.set("action", "query");
       thumbUrl.searchParams.set("titles", pageTitle);
       thumbUrl.searchParams.set("prop", "pageimages");
-      thumbUrl.searchParams.set("pithumbsize", "800");
+      thumbUrl.searchParams.set("pithumbsize", "640");
       thumbUrl.searchParams.set("format", "json");
       thumbUrl.searchParams.set("origin", "*");
 
@@ -80,9 +118,9 @@ export async function POST(req: NextRequest) {
       });
       const thumbData = await thumbRes.json().catch(() => ({}));
       const tpages = thumbData?.query?.pages ?? {};
-      const tpage = tpages[Object.keys(tpages)[0]] as any;
+      const tpage = tpages[Object.keys(tpages)[0]] as { thumbnail?: { source?: string } } | undefined;
       const thumb = tpage?.thumbnail?.source as string | undefined;
-      if (thumb) {
+      if (thumb && !isRejected(`${pageTitle} ${thumb}`)) {
         const value = { success: true, photoUrl: thumb, source: "wikipedia" };
         cache.set(cacheKey, { value, expires: Date.now() + CACHE_TTL_MS });
         return NextResponse.json<PhotoResult>(value);
@@ -92,9 +130,7 @@ export async function POST(req: NextRequest) {
     console.error("[place-photo] wikipedia error", placeName, err);
   }
 
-  const fallbackUrl =
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/World_map_-_low_resolution.svg/800px-World_map_-_low_resolution.svg.png";
-  const value = { success: true, photoUrl: fallbackUrl, source: "wikipedia-fallback" };
+  const value = { success: false, photoUrl: null, source: "wikipedia" };
   cache.set(cacheKey, { value, expires: Date.now() + CACHE_TTL_MS });
   return NextResponse.json<PhotoResult>(value);
 }
