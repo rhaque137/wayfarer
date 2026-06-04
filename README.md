@@ -71,7 +71,15 @@ Run the migration in `supabase/migrations/0001_wayfarer_init.sql` in your Supaba
 - Ensure `SUPABASE_SERVICE_ROLE_KEY` is set (server-only).
 - Deploy as a standard Next.js App Router project.
 
+## Supabase Auth Redirects
+
+For Google OAuth and email recovery, configure these redirect URLs in Supabase Auth:
+
+- Production: `https://wayfarer-ten.vercel.app/auth/callback`
+- Local dev: `http://localhost:3000/auth/callback`
+
+The callback route completes PKCE code exchange, handles provider errors, creates or updates a `profiles` row for signed-in users, and redirects users to `/trips` by default.
+
 ## Notes
 
 This repo includes working scaffolds for the required integrations; some provider APIs (Viator/Uber/Skyscanner) require account-specific endpoints and OAuth flows. Those routes are implemented as thin proxies and are ready to be finalized once your provider accounts/hosts are confirmed.
-

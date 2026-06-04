@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/context";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export function UserMenu() {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const supabase = getSupabaseBrowserClient();
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -19,13 +21,37 @@ export function UserMenu() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  if (loading) {
+    return (
+      <div
+        aria-live="polite"
+        className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-500 shadow-sm"
+      >
+        Checking sign in
+      </div>
+    );
+  }
+
+  if (!supabase) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2 text-xs font-semibold text-neutral-400"
+        aria-label="Sign in unavailable"
+      >
+        Sign in unavailable
+      </button>
+    );
+  }
+
   if (!user) {
     return (
       <div className="flex items-center gap-2">
         <Link
           id="nav-google-btn"
           href="/login?provider=google"
-          className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 shadow-sm transition-all hover:border-[#E8472A] hover:text-[#E8472A]"
+          className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 shadow-sm transition-colors hover:border-[#E8472A] hover:text-[#E8472A]"
           aria-label="Continue with Google"
         >
           Google
@@ -33,14 +59,14 @@ export function UserMenu() {
         <Link
           id="nav-signin-btn"
           href="/login"
-          className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 shadow-sm transition-all hover:border-[#E8472A] hover:text-[#E8472A]"
+          className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 shadow-sm transition-colors hover:border-[#E8472A] hover:text-[#E8472A]"
         >
           Log In
         </Link>
         <Link
           id="nav-signup-btn"
           href="/login?tab=signup"
-          className="rounded-full bg-gradient-to-r from-[#1a1a1a] to-[#2d2d2d] px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:opacity-90"
+          className="rounded-full bg-gradient-to-r from-[#1a1a1a] to-[#2d2d2d] px-4 py-2 text-xs font-bold text-white shadow-sm transition-opacity hover:opacity-90"
         >
           Get Started
         </Link>
@@ -61,7 +87,7 @@ export function UserMenu() {
         onClick={() => setOpen((v) => !v)}
         aria-label="Open user menu"
         aria-expanded={open}
-        className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white py-1 pl-1 pr-3 shadow-sm transition-all hover:border-[#E8472A]/40 hover:shadow-md"
+        className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white py-1 pl-1 pr-3 shadow-sm transition-colors hover:border-[#E8472A]/40"
       >
         {profile?.avatar_url ? (
           <img
@@ -126,9 +152,8 @@ export function UserMenu() {
           {/* Menu items */}
           <div className="py-2">
             {[
-              { label: "My Trips", href: "/trips", icon: "✈️" },
-              { label: "My Profile", href: "/profile", icon: "👤" },
-              { label: "Settings", href: "/settings", icon: "⚙️" },
+              { label: "My Trips", href: "/trips", icon: "Trips" },
+              { label: "My Profile", href: "/profile", icon: "Profile" },
             ].map((item) => (
               <Link
                 key={item.href}
@@ -136,7 +161,9 @@ export function UserMenu() {
                 onClick={() => setOpen(false)}
                 className="flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-[#E8472A]"
               >
-                <span className="text-base">{item.icon}</span>
+                <span className="w-12 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
+                  {item.icon}
+                </span>
                 {item.label}
               </Link>
             ))}

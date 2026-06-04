@@ -12,9 +12,9 @@ export const PLACEHOLDER_IMAGE: DestinationImage = {
 };
 
 const image = (url: string, alt: string, attribution = "Wikimedia Commons"): DestinationImage => ({
-  url,
+  url: url.startsWith("/") ? url : PLACEHOLDER_IMAGE.url,
   alt,
-  attribution,
+  attribution: url.startsWith("/") ? attribution : "Local Wayfarer fallback",
 });
 
 export const DESTINATION_IMAGES: DestinationRegistry = {
@@ -23,15 +23,15 @@ export const DESTINATION_IMAGES: DestinationRegistry = {
     "Aerial view of Barcelona, Spain",
   ),
   santorini: image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Oia%2C_Santorini_HDR_sunset.jpg/640px-Oia%2C_Santorini_HDR_sunset.jpg",
+    PLACEHOLDER_IMAGE.url,
     "Whitewashed buildings in Oia, Santorini at sunset",
   ),
   patagonia: image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Cerro_Fitz_Roy_-_Patagonia_-_Argentina.jpg/640px-Cerro_Fitz_Roy_-_Patagonia_-_Argentina.jpg",
+    PLACEHOLDER_IMAGE.url,
     "Cerro Fitz Roy mountains in Patagonia, Argentina",
   ),
   "new-york-city": image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/View_of_Empire_State_Building_from_Rockefeller_Center_New_York_City_dllu_%28cropped%29.jpg/640px-View_of_Empire_State_Building_from_Rockefeller_Center_New_York_City_dllu_%28cropped%29.jpg",
+    PLACEHOLDER_IMAGE.url,
     "View of the Empire State Building and New York City skyline",
   ),
   bali: image(
@@ -59,7 +59,7 @@ export const DESTINATION_IMAGES: DestinationRegistry = {
     "Eiffel Tower and Paris skyline",
   ),
   tokyo: image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Tokyo_Tower_and_around_Skyscrapers.jpg/640px-Tokyo_Tower_and_around_Skyscrapers.jpg",
+    PLACEHOLDER_IMAGE.url,
     "Tokyo Tower and surrounding skyscrapers",
   ),
   london: image(
@@ -79,7 +79,7 @@ export const DESTINATION_IMAGES: DestinationRegistry = {
     "Machu Picchu ruins in Peru",
   ),
   marrakech: image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Jemaa_el-Fnaa_Marrakesh_Morocco.jpg/640px-Jemaa_el-Fnaa_Marrakesh_Morocco.jpg",
+    PLACEHOLDER_IMAGE.url,
     "Jemaa el-Fnaa square in Marrakech, Morocco",
   ),
   kyoto: image(

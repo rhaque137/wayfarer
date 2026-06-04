@@ -12,7 +12,14 @@ import { CREATE_TRIP_ERROR_MESSAGE, MAX_TRIP_PROMPT_LENGTH } from "@/lib/trip-li
 
 const AuthBar = dynamic(() => import("@/components/home/AuthBar").then((mod) => mod.AuthBar), {
   ssr: false,
-  loading: () => <div className="h-9 w-[120px]" />,
+  loading: () => (
+    <a
+      href="/login"
+      className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-600 shadow-sm"
+    >
+      Sign in
+    </a>
+  ),
 });
 const UpcomingTrips = dynamic(() => import("@/components/home/UpcomingTrips").then((mod) => mod.UpcomingTrips), {
   ssr: false,
@@ -51,7 +58,6 @@ export default function Home() {
   const [intake, setIntake] = useState<TripIntake>(DEFAULT_INTAKE);
   const [recentTrips, setRecentTrips] = useState<RecentTrip[]>([]);
   const [recentImages, setRecentImages] = useState<Record<string, string>>({});
-  const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isCreatingTrip, setIsCreatingTrip] = useState(false);
   const [createTripError, setCreateTripError] = useState<string | null>(null);
@@ -152,10 +158,6 @@ export default function Home() {
     }
   }, []);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   const focusHeroSearch = () => {
     const el = document.getElementById("trip-destination") as HTMLInputElement | null;
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -198,14 +200,14 @@ export default function Home() {
             <nav className="hidden items-center gap-4 md:flex">
               {[
                 { label: "Home", href: "#top", active: true },
-                { label: "Upcoming", href: "#upcoming" },
                 { label: "Explore", href: "#explore" },
-                { label: "Guides", href: "#guides" },
+                { label: "Trips", href: "/trips" },
+                { label: "Pricing", href: "/pricing" },
               ].map((item) => (
                 <a
                   key={item.label}
                   href={item.href}
-                  className={`text-sm font-medium text-neutral-600 transition-all duration-200 hover:text-[#E8472A] ${
+                  className={`text-sm font-medium text-neutral-600 transition-colors duration-200 hover:text-[#E8472A] ${
                     item.active ? "border-b-2 border-[#E8472A] pb-1 text-[#E8472A]" : "border-b-2 border-transparent pb-1"
                   }`}
                 >
@@ -224,7 +226,7 @@ export default function Home() {
               ☰
             </button>
             <div suppressHydrationWarning>
-              {mounted ? <AuthBar /> : <div className="h-9 w-[120px]" />}
+              <AuthBar />
             </div>
           </div>
         </div>
@@ -233,14 +235,14 @@ export default function Home() {
             <div className="flex flex-col gap-2 text-sm font-medium text-neutral-700">
               {[
                 { label: "Home", href: "#top" },
-                { label: "Upcoming", href: "#upcoming" },
                 { label: "Explore", href: "#explore" },
-                { label: "Guides", href: "#guides" },
+                { label: "Trips", href: "/trips" },
+                { label: "Pricing", href: "/pricing" },
               ].map((item) => (
                 <a
                   key={item.label}
                   href={item.href}
-                  className="rounded-xl px-3 py-2 transition-all duration-200 hover:bg-[#F5EAE6] hover:text-[#E8472A]"
+                  className="rounded-xl px-3 py-2 transition-colors duration-200 hover:bg-[#F5EAE6] hover:text-[#E8472A]"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   {item.label}

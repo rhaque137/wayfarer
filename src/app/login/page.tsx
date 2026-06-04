@@ -44,6 +44,7 @@ function LoginPageContent() {
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab") === "signup" ? "signup" : "login";
   const provider = searchParams.get("provider");
+  const nextPath = searchParams.get("next") ?? "/trips";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -53,9 +54,9 @@ function LoginPageContent() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace("/");
+      router.replace(nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/trips");
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, nextPath]);
 
   useEffect(() => {
     if (provider === "google" && !user && !loading) {
@@ -66,30 +67,57 @@ function LoginPageContent() {
   }, [provider, user, loading]);
 
   const runGoogle = async () => {
-    if (!supabase) return;
+    if (!supabase) {
+      setError("Sign in is unavailable because Supabase is not configured.");
+      return;
+    }
     setPending(true);
     setError(null);
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-    setPending(false);
+    setSuccess(null);
+
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(
+            nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/trips",
+          )}`,
+        },
+      });
+
+      if (oauthError) {
+        setError(oauthError.message || "Google sign-in could not start. Please try again.");
+        setPending(false);
+        return;
+      }
+
+      setSuccess("Redirecting to Google...");
+    } catch {
+      setError("Google sign-in could not start. Please try again.");
+      setPending(false);
+    }
   };
 
   const runEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supabase) return;
+    if (!supabase) {
+      setError("Sign in is unavailable because Supabase is not configured.");
+      return;
+    }
     setPending(true);
     setError(null);
     const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
     if (loginError) setError(loginError.message);
-    else router.replace("/");
+    else router.replace(nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/trips");
     setPending(false);
   };
 
   const runEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supabase) return;
+    if (!supabase) {
+      setError("Sign up is unavailable because Supabase is not configured.");
+      return;
+    }
     setPending(true);
     setError(null);
     setSuccess(null);
@@ -98,7 +126,7 @@ function LoginPageContent() {
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/trips")}`,
       },
     });
     if (signupError) {
@@ -106,22 +134,25 @@ function LoginPageContent() {
     } else if (data.user && !data.session) {
       setSuccess("Check your email to confirm your account.");
     } else {
-      router.replace("/");
+      router.replace("/trips");
     }
     setPending(false);
   };
 
   const runForgot = async () => {
-    if (!supabase) return;
+    if (!supabase) {
+      setError("Password reset is unavailable because Supabase is not configured.");
+      return;
+    }
     if (!email) {
       setError("Enter your email address first.");
       return;
     }
     setPending(true);
-    setError(null);
+      setError(null);
     setSuccess(null);
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+      redirectTo: `${window.location.origin}/auth/callback?type=recovery&next=${encodeURIComponent("/login")}`,
     });
     if (resetError) setError(resetError.message);
     else setSuccess("Password reset email sent.");
@@ -166,6 +197,8 @@ function LoginPageContent() {
             <button
               onClick={runGoogle}
               disabled={pending}
+              aria-label="Continue with Google"
+              aria-busy={pending}
               className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#df9c9e]/20 bg-white py-3.5 text-lg font-semibold text-[#4d2124] shadow-[0_12px_32px_rgba(77,33,36,0.06)] transition hover:bg-[#ffedec] disabled:opacity-70"
             >
               {pending ? <Spinner /> : GOOGLE_ICON}
@@ -184,10 +217,11 @@ function LoginPageContent() {
             <form onSubmit={tab === "login" ? runEmailLogin : runEmailSignup} className="space-y-5">
               {tab === "signup" && (
                 <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-[#834c4f]">
+                  <label htmlFor="login-full-name" className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-[#834c4f]">
                     Full Name
                   </label>
                   <input
+                    id="login-full-name"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Alex Traveler"
@@ -197,10 +231,11 @@ function LoginPageContent() {
               )}
 
               <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-[#834c4f]">
+                <label htmlFor="login-email" className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-[#834c4f]">
                   Email Address
                 </label>
                 <input
+                  id="login-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -212,7 +247,7 @@ function LoginPageContent() {
 
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase tracking-[0.16em] text-[#834c4f]">
+                  <label htmlFor="login-password" className="text-xs font-bold uppercase tracking-[0.16em] text-[#834c4f]">
                     Password
                   </label>
                   {tab === "login" && (
@@ -226,6 +261,7 @@ function LoginPageContent() {
                   )}
                 </div>
                 <input
+                  id="login-password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -236,12 +272,13 @@ function LoginPageContent() {
                 />
               </div>
 
-              {error && <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-              {success && <div className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">{success}</div>}
+              {error && <div role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+              {success && <div aria-live="polite" className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">{success}</div>}
 
               <button
                 type="submit"
                 disabled={pending}
+                aria-busy={pending}
                 className="w-full rounded-xl bg-[#b22005] py-4 text-3xl font-bold text-[#ffefec] transition hover:bg-[#9e1700] disabled:opacity-70"
               >
                 {pending ? "Please wait..." : tab === "login" ? "Log In" : "Create Account"}

@@ -68,25 +68,50 @@ export function AuthModal() {
     return () => window.removeEventListener("keydown", handler);
   }, [closeAuth]);
 
-  if (!authOpen || !supabase) return null;
+  if (!authOpen) return null;
 
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === overlayRef.current) closeAuth();
   };
 
   const handleGoogleSignIn = async () => {
+    if (!supabase) {
+      setError("Sign in is unavailable because Supabase is not configured.");
+      return;
+    }
     setLoading(true);
     setError(null);
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-    setLoading(false);
+    setSuccess(null);
+
+    const next = `${window.location.pathname}${window.location.search}` || "/trips";
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo },
+      });
+
+      if (oauthError) {
+        setError(oauthError.message || "Google sign-in could not start. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      setSuccess("Redirecting to Google...");
+    } catch {
+      setError("Google sign-in could not start. Please try again.");
+      setLoading(false);
+    }
   };
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
+    if (!supabase) {
+      setError("Sign in is unavailable because Supabase is not configured.");
+      return;
+    }
     setLoading(true);
     setError(null);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -101,6 +126,10 @@ export function AuthModal() {
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
+    if (!supabase) {
+      setError("Sign up is unavailable because Supabase is not configured.");
+      return;
+    }
     setLoading(true);
     setError(null);
     const { data, error } = await supabase.auth.signUp({
@@ -108,7 +137,7 @@ export function AuthModal() {
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/trips")}`,
       },
     });
     if (error) {
@@ -122,6 +151,10 @@ export function AuthModal() {
   };
 
   const handleForgotPassword = async () => {
+    if (!supabase) {
+      setError("Password reset is unavailable because Supabase is not configured.");
+      return;
+    }
     if (!email) {
       setError("Enter your email address first.");
       return;
@@ -129,7 +162,7 @@ export function AuthModal() {
     setLoading(true);
     setError(null);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+      redirectTo: `${window.location.origin}/auth/callback?type=recovery&next=${encodeURIComponent("/login")}`,
     });
     if (error) {
       setError(error.message);
@@ -205,6 +238,8 @@ export function AuthModal() {
           <button
             onClick={handleGoogleSignIn}
             disabled={loading}
+            aria-label="Continue with Google"
+            aria-busy={loading}
             className="flex w-full items-center justify-center gap-3 rounded-xl border border-neutral-200 bg-white py-3 text-sm font-semibold text-neutral-700 shadow-sm transition-all hover:bg-neutral-50 hover:shadow-md disabled:opacity-60"
           >
             {loading ? <Spinner /> : GOOGLE_ICON}
@@ -278,19 +313,20 @@ export function AuthModal() {
             </div>
 
             {error && (
-              <div className="rounded-xl bg-red-50 px-4 py-3 text-xs font-medium text-red-600">
-                ⚠️ {error}
+              <div role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-xs font-medium text-red-600">
+                {error}
               </div>
             )}
             {success && (
-              <div className="rounded-xl bg-green-50 px-4 py-3 text-xs font-medium text-green-700">
-                ✅ {success}
+              <div aria-live="polite" className="rounded-xl bg-green-50 px-4 py-3 text-xs font-medium text-green-700">
+                {success}
               </div>
             )}
 
             <button
               type="submit"
               disabled={loading}
+              aria-busy={loading}
               className="mt-1 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1a1a1a] to-[#2d2d2d] text-sm font-bold text-white shadow-md transition-all hover:opacity-90 hover:shadow-lg disabled:opacity-60"
             >
               {loading ? <Spinner /> : null}

@@ -27,6 +27,16 @@ Use this checklist when automated smoke coverage is limited.
 - Confirm loading states are visible and announced where practical.
 - Confirm each error state offers a next action: retry, edit prompt, back home, save locally, or contact support.
 
+## Homepage/Auth Smoke Checks
+
+1. Confirm homepage destination imagery renders without broken image icons.
+2. Confirm rendered homepage HTML does not include the previously failing Wikimedia thumbnail URLs.
+3. Scroll the homepage and confirm content cards do not slide, jump, or reflow after hydration.
+4. Open `/login`, click `Continue with Google`, and confirm the button shows a stable redirect/loading state.
+5. Visit `/auth/callback?error=access_denied&error_description=Provider%20cancelled` and confirm a friendly retry/support state renders.
+6. Confirm `/about` no longer contains "Coming Soon."
+7. Confirm header and mobile nav only show links to real routes or real homepage sections.
+
 ## Required Commands
 
 ```bash

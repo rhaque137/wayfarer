@@ -18,7 +18,61 @@ export type UserProfile = {
   home_city: string | null;
   travel_style: string | null;
   created_at: string;
+  updated_at?: string | null;
 };
+
+type SupabaseBrowserClient = NonNullable<ReturnType<typeof getSupabaseBrowserClient>>;
+
+function metadataString(user: User, key: string) {
+  const value = (user.user_metadata as Record<string, unknown> | null)?.[key];
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function profilePayload(user: User) {
+  const fullName =
+    metadataString(user, "full_name") ??
+    metadataString(user, "name") ??
+    user.email?.split("@")[0] ??
+    null;
+
+  return {
+    id: user.id,
+    email: user.email ?? null,
+    full_name: fullName,
+    avatar_url: metadataString(user, "avatar_url") ?? metadataString(user, "picture"),
+    updated_at: new Date().toISOString(),
+  };
+}
+
+export async function ensureUserProfile(
+  supabase: SupabaseBrowserClient,
+  user: User,
+): Promise<UserProfile | null> {
+  const { data: existing, error: fetchError } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (existing && !fetchError) return existing as UserProfile;
+
+  if (fetchError) {
+    console.warn("Wayfarer auth: profile lookup failed, attempting upsert", fetchError.message);
+  }
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .upsert(profilePayload(user) as never, { onConflict: "id" })
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    console.warn("Wayfarer auth: profile upsert failed", error.message);
+    return existing ? (existing as UserProfile) : null;
+  }
+
+  return data as UserProfile | null;
+}
 
 type AuthContextValue = {
   user: User | null;
@@ -49,20 +103,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [authTab, setAuthTab] = useState<"login" | "signup">("login");
 
   const fetchProfile = useCallback(
-    async (userId: string) => {
+    async (nextUser: User) => {
       if (!supabase) return;
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
-      if (data) setProfile(data as UserProfile);
+      const nextProfile = await ensureUserProfile(supabase, nextUser);
+      setProfile(nextProfile);
     },
     [supabase],
   );
 
   const refreshProfile = useCallback(async () => {
-    if (user) await fetchProfile(user.id);
+    if (user) await fetchProfile(user);
   }, [user, fetchProfile]);
 
   useEffect(() => {
@@ -73,7 +123,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user ?? null);
-      if (data.user) fetchProfile(data.user.id);
+      if (data.user) {
+        void fetchProfile(data.user);
+      } else {
+        setProfile(null);
+      }
       setLoading(false);
     });
 
@@ -82,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id);
+        void fetchProfile(session.user);
       } else {
         setProfile(null);
       }
