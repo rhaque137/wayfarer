@@ -9,6 +9,7 @@ import { PanelHeader } from "@/components/ui/PanelHeader";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { QuickActions } from "@/components/chat/QuickActions";
 import { ChatInputBar } from "@/components/chat/ChatInputBar";
+import { buildMockTrip, normalizeTrip } from "@/lib/trip-schema";
 
 export function ChatPanel({
   isCollapsed = false,
@@ -37,7 +38,7 @@ export function ChatPanel({
         if (toolName === "create_trip" && (part as any).state === "output-available") {
           const tripData = (part as any).output?.trip;
           if (tripData) {
-            setTrip(normalizeTrip(tripData));
+            setTrip(normalizeTrip(tripData, lastQuery ?? "Trip plan"));
             setPendingAIChanges(true);
             handled = true;
           }
@@ -60,7 +61,7 @@ export function ChatPanel({
         if (data.trip) {
           if (isBudgetOnlyTrip(data.trip)) return;
           const tripData = data.trip;
-          setTrip(normalizeTrip(tripData));
+          setTrip(normalizeTrip(tripData, lastQuery ?? "Trip plan"));
           setPendingAIChanges(true);
         }
       } catch {
@@ -121,11 +122,13 @@ export function ChatPanel({
       sentRef.current = true;
       window.history.replaceState({}, "", window.location.pathname);
       setLastQuery(initialQuery);
+      setTrip(buildMockTrip(initialQuery));
       sendMessage({ text: initialQuery });
       return;
     }
     if (!initialQuery && lastQuery && !sentRef.current && !trip) {
       sentRef.current = true;
+      setTrip(buildMockTrip(lastQuery));
       sendMessage({ text: lastQuery });
     }
   }, [sendMessage, lastQuery, trip, setLastQuery]);
@@ -152,6 +155,7 @@ export function ChatPanel({
           <div className="flex items-center gap-2 text-neutral-400">
             <button
               onClick={onToggle}
+              aria-label="Collapse chat panel"
               className="rounded-full border border-neutral-200 bg-white px-2 py-1 text-xs text-neutral-600 transition-all duration-200 hover:border-[#E8472A] hover:text-[#E8472A]"
             >
               ✕
@@ -176,13 +180,26 @@ export function ChatPanel({
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {error && (
           <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error.message || "Something went wrong while contacting the AI."}
-            <button
-              onClick={() => clearError?.()}
-              className="ml-2 text-xs underline"
-            >
-              Dismiss
-            </button>
+            <div>{error.message || "Something went wrong while contacting the AI."}</div>
+            <div className="mt-2 flex flex-wrap gap-3 text-xs font-semibold">
+              <button onClick={() => clearError?.()} className="underline">
+                Edit prompt
+              </button>
+              {lastQuery ? (
+                <button
+                  onClick={() => {
+                    clearError?.();
+                    sendMessage({ text: lastQuery });
+                  }}
+                  className="underline"
+                >
+                  Retry
+                </button>
+              ) : null}
+              <Link href="/support" className="underline">
+                Contact support
+              </Link>
+            </div>
           </div>
         )}
         {displayMessages.length === 0 && (
@@ -199,7 +216,7 @@ export function ChatPanel({
         ))}
 
         {(status === "streaming" || status === "submitted") && (
-          <div className="flex items-center gap-2 text-sm text-neutral-500">
+          <div role="status" aria-live="polite" className="flex items-center gap-2 text-sm text-neutral-500">
             <span className="animate-pulse">✦</span> Planning your trip...
           </div>
         )}
@@ -230,6 +247,7 @@ export function ChatPanel({
         {(status === "streaming" || status === "submitted") && (
           <button
             onClick={() => stop()}
+            aria-label="Stop AI response"
             className="mt-2 text-xs text-neutral-500 underline"
           >
             Stop response
@@ -255,45 +273,4 @@ function isBudgetOnlyTrip(tripData: any) {
   });
   const allNoCoords = acts.every((a: any) => a.lat == null || a.lng == null);
   return hits.length >= Math.ceil(acts.length * 0.7) && allNoCoords;
-}
-
-function normalizeTrip(tripData: any) {
-  const numDays = Math.max(1, Number(tripData.numDays ?? tripData.days?.length ?? 1));
-  const rawDays = Array.isArray(tripData.days) ? tripData.days : [];
-  const byNumber = new Map<number, any>();
-  rawDays.forEach((d: any) => {
-    const n = Number(d.dayNumber ?? d.day ?? 0);
-    if (n) byNumber.set(n, d);
-  });
-
-  const days = Array.from({ length: numDays }, (_, i) => {
-    const dayNumber = i + 1;
-    const d = byNumber.get(dayNumber) ?? rawDays[i] ?? {};
-    return {
-      id: d.id ?? `day${dayNumber}`,
-      dayNumber,
-      date: d.date ?? `Day ${dayNumber}`,
-      theme: d.theme,
-        activities: (d.activities ?? []).map((a: any) => ({
-          id: a.id ?? crypto.randomUUID(),
-          name: a.name,
-          category: a.category,
-          description: a.description,
-          address: a.address,
-          rating: a.rating,
-          photoUrl: a.photoUrl,
-          imageUrl: a.imageUrl,
-          lat: a.lat,
-          lng: a.lng,
-        })),
-    };
-  });
-
-  return {
-    id: Date.now().toString(),
-    name: tripData.name ?? "Trip Plan",
-    destination: tripData.destination ?? "",
-    numPeople: tripData.numPeople ?? 2,
-    days,
-  };
 }

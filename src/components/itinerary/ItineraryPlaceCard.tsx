@@ -12,12 +12,24 @@ type Props = {
 };
 
 export function ItineraryPlaceCard({ activity, index, destination, pinColor }: Props) {
-  const { activeActivityId, setActiveActivityId, setActivityPhoto } = useTripStore();
+  const {
+    activeActivityId,
+    setActiveActivityId,
+    setActivityPhoto,
+    updateActivity,
+    toggleActivityLock,
+    saveActivity,
+    savedActivities,
+  } = useTripStore();
   const isActive = activeActivityId === activity.id;
+  const isSaved = savedActivities.some((saved) => saved.id === activity.id);
   const hasCoords = activity.lat != null && activity.lng != null;
   const [photoUrl, setPhotoUrl] = useState<string | null>(activity.photoUrl ?? null);
   const [photoLoading, setPhotoLoading] = useState<boolean>(true);
   const [expanded, setExpanded] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftName, setDraftName] = useState(activity.name);
+  const [draftDescription, setDraftDescription] = useState(activity.description);
   const [shouldLoad, setShouldLoad] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -83,7 +95,17 @@ export function ItineraryPlaceCard({ activity, index, destination, pinColor }: P
   useEffect(() => {
     setPhotoUrl(activity.photoUrl ?? null);
     setPhotoLoading(true);
+    setDraftName(activity.name);
+    setDraftDescription(activity.description);
   }, [activity.id, activity.name, destination]);
+
+  const saveEdit = () => {
+    const name = draftName.trim();
+    const description = draftDescription.trim();
+    if (!name || !description) return;
+    updateActivity(activity.id, { name, description });
+    setIsEditing(false);
+  };
 
   return (
     <div
@@ -101,18 +123,90 @@ export function ItineraryPlaceCard({ activity, index, destination, pinColor }: P
       <div className="flex items-start gap-3 min-w-0 w-full">
         <TeardropPin number={index + 1} color={pinColor ?? "#00E5FF"} />
         <div className="min-w-0">
-          <div className="text-base font-semibold text-neutral-900 truncate">{activity.name}</div>
-          <div className={["mt-2 text-sm leading-relaxed text-neutral-600", expanded ? "" : "line-clamp-3"].join(" ")}>
-            <span className="italic">From the web:</span>{" "}
-            {activity.description ?? "No description available yet."}
-          </div>
+          {isEditing ? (
+            <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+              <label className="block text-xs font-semibold text-neutral-600" htmlFor={`activity-name-${activity.id}`}>
+                Activity name
+              </label>
+              <input
+                id={`activity-name-${activity.id}`}
+                value={draftName}
+                onChange={(e) => setDraftName(e.target.value)}
+                className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-[#E8472A] focus:ring-2 focus:ring-[#E8472A]/20"
+              />
+              <label className="block text-xs font-semibold text-neutral-600" htmlFor={`activity-description-${activity.id}`}>
+                Notes
+              </label>
+              <textarea
+                id={`activity-description-${activity.id}`}
+                value={draftDescription}
+                onChange={(e) => setDraftDescription(e.target.value)}
+                rows={3}
+                className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-[#E8472A] focus:ring-2 focus:ring-[#E8472A]/20"
+              />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={saveEdit}
+                  className="rounded-full bg-[#E8472A] px-3 py-1 text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-[#E8472A]/30"
+                >
+                  Save locally
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDraftName(activity.name);
+                    setDraftDescription(activity.description);
+                    setIsEditing(false);
+                  }}
+                  className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-semibold text-neutral-700 focus:outline-none focus:ring-2 focus:ring-[#E8472A]/20"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <div className="text-base font-semibold text-neutral-900 truncate">{activity.name}</div>
+                {activity.locked ? (
+                  <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold text-neutral-600">
+                    Locked
+                  </span>
+                ) : null}
+              </div>
+              <div className={["mt-2 text-sm leading-relaxed text-neutral-600", expanded ? "" : "line-clamp-3"].join(" ")}>
+                <span className="italic">From the web:</span>{" "}
+                {activity.description ?? "No description available yet."}
+              </div>
+            </>
+          )}
           {expanded && activity.address && (
             <div className="mt-2 text-xs text-neutral-500">{activity.address}</div>
           )}
-          <div className="mt-3 text-xs font-semibold text-[#E8472A]">
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-semibold text-[#E8472A]" onClick={(e) => e.stopPropagation()}>
             <a href={mapsUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
               Open in Google Maps
             </a>
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              disabled={activity.locked}
+              className="underline disabled:text-neutral-400 disabled:no-underline"
+            >
+              Edit
+            </button>
+            <button type="button" onClick={() => toggleActivityLock(activity.id)} className="underline">
+              {activity.locked ? "Unlock" : "Lock"}
+            </button>
+            <button
+              type="button"
+              onClick={() => saveActivity(activity)}
+              className="underline disabled:text-neutral-400 disabled:no-underline"
+              disabled={isSaved}
+            >
+              {isSaved ? "Saved" : "Save locally"}
+            </button>
           </div>
         </div>
       </div>

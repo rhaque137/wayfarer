@@ -13,7 +13,11 @@ interface Props {
 export function ChatInputBar({ value, onChange, onSubmit, isLoading, placeholder }: Props) {
   return (
     <form onSubmit={onSubmit} className="flex items-center gap-2">
+      <label htmlFor="trip-chat-input" className="sr-only">
+        Ask Wayfarer to edit or improve your trip
+      </label>
       <input
+        id="trip-chat-input"
         type="text"
         value={value}
         onChange={onChange}
@@ -23,8 +27,9 @@ export function ChatInputBar({ value, onChange, onSubmit, isLoading, placeholder
       />
       <button
         type="submit"
+        aria-label={isLoading ? "Sending message" : "Send message"}
         disabled={isLoading || !value.trim()}
-        className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E8472A] text-white disabled:opacity-40 transition-all duration-200 hover:opacity-90"
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E8472A] text-white transition-all duration-200 hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-[#E8472A]/25 disabled:opacity-40"
       >
         {isLoading ? (
           <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />

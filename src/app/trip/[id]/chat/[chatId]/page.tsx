@@ -95,8 +95,8 @@ export default function TripChatPage() {
             Wayfarer AI
           </Link>
           <div className="flex items-center gap-2 text-neutral-500">
-            <button className="h-8 w-8 rounded-full border border-neutral-200 bg-white text-xs">⟲</button>
-            <button className="h-8 w-8 rounded-full border border-neutral-200 bg-white text-xs">⤴︎</button>
+            <button aria-label="Retry latest trip update" className="h-8 w-8 rounded-full border border-neutral-200 bg-white text-xs">⟲</button>
+            <button aria-label="Share trip" className="h-8 w-8 rounded-full border border-neutral-200 bg-white text-xs">⤴︎</button>
             <div className="h-8 w-8 rounded-full bg-neutral-200 text-xs font-semibold text-neutral-700 flex items-center justify-center">
               U
             </div>
@@ -180,6 +180,7 @@ export default function TripChatPage() {
               <button
                 key={t.id}
                 onClick={() => setActiveTab(t.id as typeof activeTab)}
+                aria-label={`Open ${t.label} panel`}
                 className={[
                   "flex flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[10px] font-semibold transition-all duration-200",
                   activeTab === t.id

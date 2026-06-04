@@ -414,10 +414,20 @@ export function MapPanel({
     return (
       <div className="flex h-full flex-col">
         <PanelHeader icon="🗺" label="Map" isCollapsed={isCollapsed} onToggle={onToggle} />
-        <div className="flex flex-1 items-center justify-center text-sm text-neutral-500 p-8 text-center">
-          Add{" "}
-          <code className="mx-1 rounded bg-neutral-100 px-1 text-xs">NEXT_PUBLIC_MAPBOX_TOKEN</code>{" "}
-          to .env.local to enable the map
+        <div className="flex flex-1 items-center justify-center p-8 text-center">
+          <div className="max-w-sm text-sm text-neutral-500">
+            <div>
+              Add <code className="mx-1 rounded bg-neutral-100 px-1 text-xs">NEXT_PUBLIC_MAPBOX_TOKEN</code>
+              to .env.local to enable the map.
+            </div>
+            <div className="mt-3">You can still edit the itinerary, save activities locally, or use Google Maps links.</div>
+            <a
+              href="/support"
+              className="mt-4 inline-flex rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 focus:outline-none focus:ring-4 focus:ring-[#E8472A]/20"
+            >
+              Contact support
+            </a>
+          </div>
         </div>
       </div>
     );

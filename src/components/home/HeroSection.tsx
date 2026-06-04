@@ -83,6 +83,9 @@ export function HeroSection({
 
         <div className="mt-8 w-full max-w-3xl rounded-3xl bg-white/95 p-5 shadow-xl backdrop-blur md:p-6">
           <div className="flex flex-col gap-3">
+            <label htmlFor="hero-search" className="sr-only">
+              Describe your trip
+            </label>
             <input
               id="hero-search"
               value={query}
@@ -95,11 +98,21 @@ export function HeroSection({
             <button
               onClick={onSubmit}
               disabled={isSubmitting || !query.trim()}
-              className="h-[60px] w-full rounded-xl bg-foreground text-base font-semibold text-white transition-all duration-200 hover:opacity-90 md:h-[54px]"
+              aria-describedby={error ? "hero-search-error" : undefined}
+              className="h-[60px] w-full rounded-xl bg-foreground text-base font-semibold text-white transition-all duration-200 hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-[#E8472A]/25 disabled:cursor-not-allowed disabled:opacity-60 md:h-[54px]"
             >
               {isSubmitting ? "Planning..." : "Plan My Trip →"}
             </button>
-            {error ? <div className="text-center text-xs font-semibold text-[#E8472A]">{error}</div> : null}
+            {isSubmitting ? (
+              <div role="status" aria-live="polite" className="text-center text-xs font-medium text-neutral-500">
+                Building a structured workspace...
+              </div>
+            ) : null}
+            {error ? (
+              <div id="hero-search-error" role="alert" className="text-center text-xs font-semibold text-[#E8472A]">
+                {error} Edit your prompt and retry.
+              </div>
+            ) : null}
             <div className="text-center text-xs font-medium text-neutral-500">
               Free to use — no credit card required.
             </div>
@@ -111,7 +124,8 @@ export function HeroSection({
             <button
               key={chip}
               onClick={() => onChange(chip.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "").trim())}
-              className="rounded-full border border-white/30 bg-white/20 px-4 py-2 text-xs font-medium text-white/90 backdrop-blur transition-all duration-200 hover:bg-white/30"
+              aria-label={`Use example prompt: ${chip}`}
+              className="rounded-full border border-white/30 bg-white/20 px-4 py-2 text-xs font-medium text-white/90 backdrop-blur transition-all duration-200 hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white/60"
             >
               {chip}
             </button>

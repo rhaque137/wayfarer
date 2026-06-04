@@ -32,7 +32,7 @@ export function PanelHeader({
             {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </button>
         ) : null}
-        <Code2 className="h-4 w-4 text-neutral-400" />
+        <Code2 aria-hidden="true" className="h-4 w-4 text-neutral-400" />
       </div>
     </div>
   );

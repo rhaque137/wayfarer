@@ -55,6 +55,7 @@ export function PlaceCardLight({ place }: { place: PlaceCardData }) {
                     description: place.description,
                     rating: place.rating,
                     imageUrl: place.imageUrl,
+                    locked: false,
                   })
             }
           >

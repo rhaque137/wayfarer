@@ -24,8 +24,19 @@ export function ItineraryPanel({
     return (
       <div className="flex h-full flex-col">
         <PanelHeader icon="⭐" label="Itinerary" isCollapsed={false} onToggle={onToggle} />
-        <div className="flex flex-1 items-center justify-center text-sm text-neutral-500 p-8 text-center">
-          Describe a trip in the chat to generate your itinerary
+        <div className="flex flex-1 items-center justify-center p-8 text-center">
+          <div className="max-w-xs">
+            <div className="text-sm font-semibold text-neutral-900">No itinerary loaded yet</div>
+            <div className="mt-2 text-sm text-neutral-500">
+              Describe a trip in chat, edit your prompt, or return home to start over.
+            </div>
+            <Link
+              href="/"
+              className="mt-4 inline-flex rounded-full bg-[#E8472A] px-4 py-2 text-xs font-semibold text-white focus:outline-none focus:ring-4 focus:ring-[#E8472A]/25"
+            >
+              Back home
+            </Link>
+          </div>
         </div>
       </div>
     );

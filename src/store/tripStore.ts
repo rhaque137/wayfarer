@@ -1,36 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { Activity, Trip } from "@/lib/trip-schema";
 
-export interface Activity {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  address?: string;
-  rating?: number;
-  photoUrl?: string;
-  imageUrl?: string;
-  lat?: number;
-  lng?: number;
-}
-
-export interface Day {
-  id: string;
-  dayNumber: number;
-  date: string;
-  theme?: string;
-  activities: Activity[];
-}
-
-export interface Trip {
-  id: string;
-  name: string;
-  destination: string;
-  startDate?: string;
-  endDate?: string;
-  numPeople?: number;
-  days: Day[];
-}
+export type { Activity, Day, Trip } from "@/lib/trip-schema";
 
 export interface Message {
   id: string;
@@ -59,6 +31,8 @@ export interface TripStore {
   setPendingAIChanges: (v: boolean) => void;
   setActiveActivityId: (id: string | null) => void;
   setActivityPhoto: (id: string, photoUrl: string) => void;
+  updateActivity: (id: string, partial: Partial<Activity>) => void;
+  toggleActivityLock: (id: string) => void;
   setLastQuery: (query: string) => void;
 }
 
@@ -107,6 +81,36 @@ export const useTripStore = create<TripStore>()(
                 ...day,
                 activities: day.activities.map((act) =>
                   act.id === id ? { ...act, photoUrl } : act
+                ),
+              })),
+            },
+          };
+        }),
+      updateActivity: (id, partial) =>
+        set((state) => {
+          if (!state.trip) return state;
+          return {
+            trip: {
+              ...state.trip,
+              days: state.trip.days.map((day) => ({
+                ...day,
+                activities: day.activities.map((act) =>
+                  act.id === id && !act.locked ? { ...act, ...partial } : act,
+                ),
+              })),
+            },
+          };
+        }),
+      toggleActivityLock: (id) =>
+        set((state) => {
+          if (!state.trip) return state;
+          return {
+            trip: {
+              ...state.trip,
+              days: state.trip.days.map((day) => ({
+                ...day,
+                activities: day.activities.map((act) =>
+                  act.id === id ? { ...act, locked: !act.locked } : act,
                 ),
               })),
             },
