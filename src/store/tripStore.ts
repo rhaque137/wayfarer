@@ -32,6 +32,7 @@ export interface TripStore {
   setActiveActivityId: (id: string | null) => void;
   setActivityPhoto: (id: string, photoUrl: string) => void;
   updateActivity: (id: string, partial: Partial<Activity>) => void;
+  removeActivity: (id: string) => void;
   toggleActivityLock: (id: string) => void;
   setLastQuery: (query: string) => void;
 }
@@ -97,6 +98,19 @@ export const useTripStore = create<TripStore>()(
                 activities: day.activities.map((act) =>
                   act.id === id && !act.locked ? { ...act, ...partial } : act,
                 ),
+              })),
+            },
+          };
+        }),
+      removeActivity: (id) =>
+        set((state) => {
+          if (!state.trip) return state;
+          return {
+            trip: {
+              ...state.trip,
+              days: state.trip.days.map((day) => ({
+                ...day,
+                activities: day.activities.filter((act) => act.id !== id || act.locked),
               })),
             },
           };

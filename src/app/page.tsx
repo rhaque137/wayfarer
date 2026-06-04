@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { HeroSection } from "@/components/home/HeroSection";
+import { HeroSection, TripIntake, buildTripQuery } from "@/components/home/HeroSection";
 import { FooterCTA } from "@/components/home/FooterCTA";
 import { HelpWidget } from "@/components/home/HelpWidget";
 import { SiteFooter } from "@/components/home/SiteFooter";
@@ -20,6 +20,9 @@ const UpcomingTrips = dynamic(() => import("@/components/home/UpcomingTrips").th
 const DestinationGrid = dynamic(() => import("@/components/home/DestinationGrid").then((mod) => mod.DestinationGrid), {
   ssr: false,
 });
+const ProductProof = dynamic(() => import("@/components/home/ProductProof").then((mod) => mod.ProductProof), {
+  ssr: false,
+});
 const HowItWorks = dynamic(() => import("@/components/home/HowItWorks").then((mod) => mod.HowItWorks), {
   ssr: false,
 });
@@ -34,9 +37,18 @@ type RecentTrip = { id: string; name: string; destination: string; coverImage?: 
 const RECENT_IMAGE_OVERRIDES: Record<string, string> = {
   paris: getDestinationImage("Paris")?.url ?? PLACEHOLDER_IMAGE.url,
 };
+const DEFAULT_INTAKE: TripIntake = {
+  destination: "",
+  dates: "",
+  tripLength: "",
+  travelers: "2",
+  budget: "Mid-range",
+  interests: [],
+  notes: "",
+};
 
 export default function Home() {
-  const [query, setQuery] = useState("");
+  const [intake, setIntake] = useState<TripIntake>(DEFAULT_INTAKE);
   const [recentTrips, setRecentTrips] = useState<RecentTrip[]>([]);
   const [recentImages, setRecentImages] = useState<Record<string, string>>({});
   const [mounted, setMounted] = useState(false);
@@ -46,7 +58,15 @@ export default function Home() {
   const router = useRouter();
 
   const submit = async () => {
-    const trimmedQuery = query.trim();
+    const trimmedQuery = buildTripQuery(intake).trim();
+    if (!intake.destination.trim()) {
+      setCreateTripError("Add a destination before generating your itinerary.");
+      return;
+    }
+    if (!intake.dates.trim() && !intake.tripLength.trim()) {
+      setCreateTripError("Add travel dates or a trip length.");
+      return;
+    }
     if (!trimmedQuery || isCreatingTrip) return;
     if (trimmedQuery.length > MAX_TRIP_PROMPT_LENGTH) {
       setCreateTripError(`Keep your trip prompt under ${MAX_TRIP_PROMPT_LENGTH} characters.`);
@@ -123,7 +143,13 @@ export default function Home() {
 
   useEffect(() => {
     const q = new URLSearchParams(window.location.search).get("q");
-    if (q) setQuery(q);
+    if (q) {
+      setIntake((current) => ({
+        ...current,
+        destination: q,
+        notes: q,
+      }));
+    }
   }, []);
 
   useEffect(() => {
@@ -131,13 +157,13 @@ export default function Home() {
   }, []);
 
   const focusHeroSearch = () => {
-    const el = document.getElementById("hero-search") as HTMLInputElement | null;
+    const el = document.getElementById("trip-destination") as HTMLInputElement | null;
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
     el?.focus();
   };
 
   const handlePlanNew = () => {
-    if (query.trim()) {
+    if (intake.destination.trim() && (intake.dates.trim() || intake.tripLength.trim())) {
       void submit();
       return;
     }
@@ -226,8 +252,15 @@ export default function Home() {
       </div>
       <div className="mx-auto w-full max-w-[1280px] px-6 py-6">
         <HeroSection
-          query={query}
-          onChange={setQuery}
+          intake={intake}
+          onChange={(next) => {
+            setCreateTripError(null);
+            setIntake(next);
+          }}
+          onUseExample={(next) => {
+            setCreateTripError(null);
+            setIntake(next);
+          }}
           onSubmit={submit}
           isSubmitting={isCreatingTrip}
           error={createTripError}
@@ -236,6 +269,7 @@ export default function Home() {
       </div>
 
       <UpcomingTrips trips={upcomingTrips} onPlanNew={handlePlanNew} onSeeAll={() => router.push("/trips")} />
+      <ProductProof />
       <DestinationGrid />
       <HowItWorks />
       <Testimonials />

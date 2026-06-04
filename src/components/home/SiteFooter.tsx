@@ -17,9 +17,9 @@ export function SiteFooter() {
             {
               title: "Product",
               links: [
+                { label: "Home", href: "/" },
                 { label: "Trips", href: "/trips" },
-                { label: "Guides", href: "/guides" },
-                { label: "AI Concierge", href: "/concierge" },
+                { label: "Explore", href: "/#explore" },
                 { label: "Pricing", href: "/pricing" },
               ],
             },
@@ -27,16 +27,13 @@ export function SiteFooter() {
               title: "Company",
               links: [
                 { label: "About", href: "/about" },
-                { label: "Careers", href: "/careers" },
                 { label: "Contact", href: "/contact" },
-                { label: "Press", href: "/press" },
+                { label: "Support", href: "/support" },
               ],
             },
             {
               title: "Resources",
               links: [
-                { label: "Support", href: "/support" },
-                { label: "Community", href: "/community" },
                 { label: "Privacy", href: "/privacy" },
                 { label: "Terms", href: "/terms" },
               ],

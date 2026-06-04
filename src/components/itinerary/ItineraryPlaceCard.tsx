@@ -17,6 +17,7 @@ export function ItineraryPlaceCard({ activity, index, destination, pinColor }: P
     setActiveActivityId,
     setActivityPhoto,
     updateActivity,
+    removeActivity,
     toggleActivityLock,
     saveActivity,
     savedActivities,
@@ -30,6 +31,10 @@ export function ItineraryPlaceCard({ activity, index, destination, pinColor }: P
   const [isEditing, setIsEditing] = useState(false);
   const [draftName, setDraftName] = useState(activity.name);
   const [draftDescription, setDraftDescription] = useState(activity.description);
+  const [draftTime, setDraftTime] = useState(activity.startTime ?? "");
+  const [draftLocation, setDraftLocation] = useState(activity.locationName ?? activity.address ?? "");
+  const [draftCost, setDraftCost] = useState(activity.estimatedCost?.toString() ?? "");
+  const [draftNotes, setDraftNotes] = useState(activity.notes ?? "");
   const [shouldLoad, setShouldLoad] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -97,13 +102,25 @@ export function ItineraryPlaceCard({ activity, index, destination, pinColor }: P
     setPhotoLoading(true);
     setDraftName(activity.name);
     setDraftDescription(activity.description);
+    setDraftTime(activity.startTime ?? "");
+    setDraftLocation(activity.locationName ?? activity.address ?? "");
+    setDraftCost(activity.estimatedCost?.toString() ?? "");
+    setDraftNotes(activity.notes ?? "");
   }, [activity.id, activity.name, destination]);
 
   const saveEdit = () => {
     const name = draftName.trim();
     const description = draftDescription.trim();
     if (!name || !description) return;
-    updateActivity(activity.id, { name, description });
+    updateActivity(activity.id, {
+      title: name,
+      name,
+      description,
+      startTime: draftTime.trim() || undefined,
+      locationName: draftLocation.trim() || undefined,
+      estimatedCost: draftCost.trim() ? Number(draftCost) || 0 : undefined,
+      notes: draftNotes.trim() || undefined,
+    });
     setIsEditing(false);
   };
 
@@ -144,6 +161,49 @@ export function ItineraryPlaceCard({ activity, index, destination, pinColor }: P
                 rows={3}
                 className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-[#E8472A] focus:ring-2 focus:ring-[#E8472A]/20"
               />
+              <div className="grid gap-2 sm:grid-cols-3">
+                <label className="block text-xs font-semibold text-neutral-600" htmlFor={`activity-time-${activity.id}`}>
+                  Time
+                  <input
+                    id={`activity-time-${activity.id}`}
+                    value={draftTime}
+                    onChange={(e) => setDraftTime(e.target.value)}
+                    placeholder="10:00 AM"
+                    className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-normal text-neutral-900 outline-none focus:border-[#E8472A] focus:ring-2 focus:ring-[#E8472A]/20"
+                  />
+                </label>
+                <label className="block text-xs font-semibold text-neutral-600" htmlFor={`activity-location-${activity.id}`}>
+                  Location
+                  <input
+                    id={`activity-location-${activity.id}`}
+                    value={draftLocation}
+                    onChange={(e) => setDraftLocation(e.target.value)}
+                    placeholder="Place or address"
+                    className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-normal text-neutral-900 outline-none focus:border-[#E8472A] focus:ring-2 focus:ring-[#E8472A]/20"
+                  />
+                </label>
+                <label className="block text-xs font-semibold text-neutral-600" htmlFor={`activity-cost-${activity.id}`}>
+                  Cost
+                  <input
+                    id={`activity-cost-${activity.id}`}
+                    value={draftCost}
+                    onChange={(e) => setDraftCost(e.target.value)}
+                    inputMode="numeric"
+                    placeholder="45"
+                    className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-normal text-neutral-900 outline-none focus:border-[#E8472A] focus:ring-2 focus:ring-[#E8472A]/20"
+                  />
+                </label>
+              </div>
+              <label className="block text-xs font-semibold text-neutral-600" htmlFor={`activity-private-notes-${activity.id}`}>
+                Private notes
+                <input
+                  id={`activity-private-notes-${activity.id}`}
+                  value={draftNotes}
+                  onChange={(e) => setDraftNotes(e.target.value)}
+                  placeholder="Booking reference, dietary needs, accessibility..."
+                  className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-normal text-neutral-900 outline-none focus:border-[#E8472A] focus:ring-2 focus:ring-[#E8472A]/20"
+                />
+              </label>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -179,6 +239,7 @@ export function ItineraryPlaceCard({ activity, index, destination, pinColor }: P
                 <span className="italic">From the web:</span>{" "}
                 {activity.description ?? "No description available yet."}
               </div>
+              <TrustRow activity={activity} />
             </>
           )}
           {expanded && activity.address && (
@@ -198,6 +259,14 @@ export function ItineraryPlaceCard({ activity, index, destination, pinColor }: P
             </button>
             <button type="button" onClick={() => toggleActivityLock(activity.id)} className="underline">
               {activity.locked ? "Unlock" : "Lock"}
+            </button>
+            <button
+              type="button"
+              onClick={() => removeActivity(activity.id)}
+              disabled={activity.locked}
+              className="underline disabled:text-neutral-400 disabled:no-underline"
+            >
+              Delete
             </button>
             <button
               type="button"
@@ -228,6 +297,42 @@ export function ItineraryPlaceCard({ activity, index, destination, pinColor }: P
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function TrustRow({ activity }: { activity: Activity }) {
+  const status = activity.verificationStatus ?? "ai_suggestion";
+  const label =
+    status === "verified"
+      ? "Verified"
+      : status === "needs_verification"
+        ? "Needs verification"
+        : "AI suggestion";
+  const confidence =
+    typeof activity.confidence === "number" ? `${Math.round(activity.confidence * 100)}% confidence` : "Verify details";
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
+      <span className="rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 font-semibold">
+        {label}
+      </span>
+      <span>{confidence}</span>
+      {activity.lastCheckedAt ? <span>Checked {activity.lastCheckedAt}</span> : null}
+      {activity.sourceUrl ? (
+        <a
+          href={activity.sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-[#E8472A] underline"
+          onClick={(e) => e.stopPropagation()}
+        >
+          Open source
+        </a>
+      ) : null}
+      <span className="basis-full text-[10px] text-neutral-400">
+        Verify hours, prices, transit, and booking details before travel.
+      </span>
     </div>
   );
 }
