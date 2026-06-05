@@ -29,14 +29,9 @@ const guides = [
 
 export function TravelGuides() {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
   const [creatingGuide, setCreatingGuide] = useState<string | null>(null);
   const [createTripError, setCreateTripError] = useState<string | null>(null);
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
-
-  const filteredGuides = guides.filter((g) =>
-    g.city.toLowerCase().includes(searchQuery.trim().toLowerCase()),
-  );
 
   const createTrip = async (city: string, prompt?: string) => {
     if (creatingGuide) return;
@@ -77,7 +72,7 @@ export function TravelGuides() {
           aria-label="Curated destination guides"
           className="-mx-6 mt-8 flex snap-x gap-4 overflow-x-auto px-6 pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {filteredGuides.map((guide) => {
+          {guides.map((guide) => {
             const destinationImage = getDestinationImage(guide.city);
             const imageKey = guide.city.toLowerCase();
             const showImage =
@@ -125,25 +120,6 @@ export function TravelGuides() {
               </button>
             );
           })}
-        </div>
-        {filteredGuides.length === 0 && (
-          <div className="mt-6 rounded-2xl border border-neutral-200 bg-white p-6 text-center text-sm text-neutral-600">
-            No guides found. Try another search.
-          </div>
-        )}
-      </Reveal>
-
-      <Reveal delay={200}>
-        <div className="mt-8 flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
-          <span className="text-lg">🔎</span>
-          <input
-            type="text"
-            placeholder="Search a destination..."
-            aria-label="Search a destination"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full text-sm text-neutral-700 outline-none"
-          />
         </div>
       </Reveal>
     </section>
