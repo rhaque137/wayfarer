@@ -11,7 +11,7 @@ export function getSupabaseBrowserClient() {
   const url = env.client.NEXT_PUBLIC_SUPABASE_URL;
   const key = env.client.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
-    if (!warnedMissingSupabase) {
+    if (process.env.NODE_ENV !== "production" && !warnedMissingSupabase) {
       console.warn(
         "Wayfarer auth: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is missing; sign-in is unavailable.",
       );

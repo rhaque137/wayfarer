@@ -15,7 +15,7 @@ export default function TripChatPage() {
   const [chatWidth, setChatWidth] = useState(400);
   const [itineraryWidth, setItineraryWidth] = useState(360);
   const [dragging, setDragging] = useState<null | "left" | "right">(null);
-  const [activeTab, setActiveTab] = useState<"itinerary" | "map" | "budget" | "notes" | "share" | "chat">("itinerary");
+  const [activeTab, setActiveTab] = useState<"overview" | "itinerary" | "map" | "budget" | "notes" | "share" | "chat">("overview");
   const [workspaceNotice, setWorkspaceNotice] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -136,7 +136,7 @@ export default function TripChatPage() {
               {trip?.travelers ?? trip?.numPeople ? ` · ${trip.travelers ?? trip.numPeople} travelers` : null}
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="hidden flex-wrap items-center gap-2 md:flex">
             <button
               type="button"
               onClick={saveTrip}
@@ -162,7 +162,7 @@ export default function TripChatPage() {
             </button>
           </div>
         </div>
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+        <div className="mt-3 hidden gap-2 overflow-x-auto pb-1 md:flex">
           {[
             ["itinerary", "Itinerary"],
             ["map", "Map"],
@@ -192,26 +192,7 @@ export default function TripChatPage() {
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
-      {isMobile && (
-        <div className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-neutral-200 bg-[#FAF7F3] px-4 py-3 md:hidden">
-          <Link
-            href="/"
-            className="text-sm font-bold text-neutral-900"
-            aria-label="Back to home"
-          >
-            Wayfarer AI
-          </Link>
-          <div className="flex items-center gap-2 text-neutral-500">
-            <button aria-label="Retry latest trip update" className="h-8 w-8 rounded-full border border-neutral-200 bg-white text-xs">⟲</button>
-            <button aria-label="Share trip" className="h-8 w-8 rounded-full border border-neutral-200 bg-white text-xs">⤴︎</button>
-            <div className="h-8 w-8 rounded-full bg-neutral-200 text-xs font-semibold text-neutral-700 flex items-center justify-center">
-              U
-            </div>
-          </div>
-        </div>
-      )}
-
-      {(!isMobile || activeTab === "itinerary") && activeTab !== "budget" && activeTab !== "notes" && activeTab !== "share" && (
+      {(!isMobile || activeTab === "overview" || activeTab === "itinerary") && activeTab !== "budget" && activeTab !== "notes" && activeTab !== "share" && (
         <div
           className={[
             "border-r border-neutral-200 bg-[#FAF7F3] transition-all duration-300 ease-in-out",
@@ -285,11 +266,12 @@ export default function TripChatPage() {
       )}
 
       {isMobile && (
-        <div className="fixed bottom-3 left-1/2 z-40 w-[min(520px,calc(100%-24px))] -translate-x-1/2 md:hidden">
+        <div className="fixed bottom-0 left-1/2 z-40 w-[min(520px,calc(100%-24px))] -translate-x-1/2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:hidden">
           <div className="flex items-center justify-between rounded-2xl border border-neutral-200 bg-white/95 p-2 shadow-sm backdrop-blur">
             {[
-              { id: "map", label: "Overview", icon: "▦" },
+              { id: "overview", label: "Overview", icon: "▦" },
               { id: "itinerary", label: "Itinerary", icon: "🗓" },
+              { id: "map", label: "Map", icon: "⌖" },
               { id: "budget", label: "Budget", icon: "$" },
               { id: "chat", label: "AI Chat", icon: "✦" },
             ].map((t) => (

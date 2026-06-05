@@ -34,15 +34,12 @@ export function UserMenu() {
 
   if (!supabase) {
     return (
-      <button
-        type="button"
-        disabled
-        className="rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2 text-xs font-semibold text-neutral-400"
-        aria-label="Sign in unavailable"
-        title="Authentication is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY."
+      <Link
+        href="/try"
+        className="rounded-full bg-neutral-950 px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-neutral-800"
       >
-        Sign in unavailable
-      </button>
+        Try the app
+      </Link>
     );
   }
 

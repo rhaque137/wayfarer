@@ -112,10 +112,28 @@ export function parseDestinationFromPrompt(prompt: string) {
   return match?.[1]?.trim() || "Lisbon";
 }
 
+export function parseTripLengthDays(prompt: string) {
+  const lower = prompt.toLowerCase();
+  const explicit = lower.match(/\b(\d{1,2})\s*(?:day|days)\b/);
+  if (explicit) return clampDays(Number(explicit[1]));
+
+  const lengthLine = lower.match(/trip length:\s*(\d{1,2})/);
+  if (lengthLine) return clampDays(Number(lengthLine[1]));
+
+  const dateRange = lower.match(/(?:dates|travel dates):\s*[^.]*?(\d{1,2})\s*[–-]\s*(\d{1,2})/);
+  if (dateRange) {
+    const start = Number(dateRange[1]);
+    const end = Number(dateRange[2]);
+    if (Number.isFinite(start) && Number.isFinite(end) && end >= start) return clampDays(end - start + 1);
+  }
+
+  return undefined;
+}
+
 export function buildMockTrip(prompt: string, id = `local-${Date.now()}`): Trip {
   const destination = parseDestinationFromPrompt(prompt);
   const defaults = destinationDefaults[destination.toLowerCase()] ?? destinationDefaults.lisbon;
-  const base = { lat: defaults.lat, lng: defaults.lng };
+  const requestedDays = parseTripLengthDays(prompt) ?? 3;
 
   return {
     id,
@@ -125,125 +143,14 @@ export function buildMockTrip(prompt: string, id = `local-${Date.now()}`): Trip 
     summary: "A practical starter itinerary you can edit, map, save, and refine with AI.",
     numPeople: 2,
     travelers: 2,
-    tripLengthDays: 2,
+    tripLengthDays: requestedDays,
     budgetLevel: "Flexible",
     budgetCurrency: "USD",
     sourcePrompt: prompt,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     notes: "",
-    days: [
-      {
-        id: "day1",
-        dayNumber: 1,
-        title: "Arrival and orientation",
-        date: "Day 1",
-        summary: "Ease into the destination with a hotel anchor, neighborhood walk, and relaxed dinner.",
-        theme: "Arrival, orientation, and local flavor",
-        activities: [
-          {
-            id: "act-1-hotel",
-            title: `${destination} base hotel`,
-            name: `${destination} base hotel`,
-            category: "Hotel",
-            description: "Check in, drop bags, and use this as the anchor point for your first day.",
-            locationName: `${destination} base hotel`,
-            address: defaults.address,
-            lat: base.lat,
-            lng: base.lng,
-            confidence: 0.55,
-            verificationStatus: "needs_verification",
-            locked: false,
-          },
-          {
-            id: "act-1-walk",
-            title: `${destination} neighborhood walk`,
-            name: `${destination} neighborhood walk`,
-            category: "Landmark",
-            description: "Start with a low-pressure walk through a central neighborhood to get oriented.",
-            locationName: `${destination} central neighborhood`,
-            address: defaults.address,
-            lat: base.lat + 0.01,
-            lng: base.lng + 0.01,
-            confidence: 0.62,
-            verificationStatus: "ai_suggestion",
-            locked: false,
-          },
-          {
-            id: "act-1-dinner",
-            title: "Local dinner reservation",
-            name: "Local dinner reservation",
-            category: "Restaurant",
-            description: "Choose a well-reviewed local spot near your hotel and keep the first night easy.",
-            locationName: "Restaurant near hotel",
-            address: defaults.address,
-            lat: base.lat - 0.008,
-            lng: base.lng - 0.006,
-            estimatedCost: 45,
-            currency: "USD",
-            confidence: 0.5,
-            verificationStatus: "needs_verification",
-            locked: false,
-          },
-        ],
-      },
-      {
-        id: "day2",
-        dayNumber: 2,
-        title: "Culture and local flavor",
-        date: "Day 2",
-        summary: "A fuller day with food, culture, and a scenic finish.",
-        theme: "Culture, food, and a flexible afternoon",
-        activities: [
-          {
-            id: "act-2-market",
-            title: "Morning market or cafe stop",
-            name: "Morning market or cafe stop",
-            category: "Food",
-            description: "Start the day somewhere casual with local food, coffee, and people-watching.",
-            locationName: "Central market or cafe",
-            address: defaults.address,
-            lat: base.lat + 0.018,
-            lng: base.lng - 0.012,
-            estimatedCost: 20,
-            currency: "USD",
-            confidence: 0.58,
-            verificationStatus: "ai_suggestion",
-            locked: false,
-          },
-          {
-            id: "act-2-museum",
-            title: "Signature museum or historic site",
-            name: "Signature museum or historic site",
-            category: "Museum",
-            description: "Add one substantial cultural stop, then leave space to wander nearby streets.",
-            locationName: "Museum or historic site",
-            address: defaults.address,
-            lat: base.lat - 0.016,
-            lng: base.lng + 0.014,
-            estimatedCost: 25,
-            currency: "USD",
-            confidence: 0.6,
-            verificationStatus: "needs_verification",
-            locked: false,
-          },
-          {
-            id: "act-2-view",
-            title: "Sunset viewpoint",
-            name: "Sunset viewpoint",
-            category: "Viewpoint",
-            description: "Close with a scenic view and keep dinner nearby to avoid extra transit.",
-            locationName: "Scenic viewpoint",
-            address: defaults.address,
-            lat: base.lat + 0.024,
-            lng: base.lng + 0.02,
-            confidence: 0.65,
-            verificationStatus: "ai_suggestion",
-            locked: false,
-          },
-        ],
-      },
-    ],
+    days: buildFallbackDays(destination, requestedDays, defaults),
     budgetItems: [
       { id: "budget-lodging", category: "Lodging", label: "Hotel or apartment", estimatedCost: 320, currency: "USD" },
       { id: "budget-food", category: "Food", label: "Meals and snacks", estimatedCost: 160, currency: "USD" },
@@ -253,6 +160,144 @@ export function buildMockTrip(prompt: string, id = `local-${Date.now()}`): Trip 
     ],
     travelLegs: [],
   };
+}
+
+function buildFallbackDays(
+  destination: string,
+  requestedDays: number,
+  defaults: { lat: number; lng: number; address: string },
+): Day[] {
+  const templates = getDestinationTemplates(destination);
+
+  return Array.from({ length: requestedDays }, (_, idx) => {
+    const template = templates[idx % templates.length];
+    const dayNumber = idx + 1;
+    return {
+      id: `day${dayNumber}`,
+      dayNumber,
+      title: template.title,
+      date: `Day ${dayNumber}`,
+      summary: template.summary,
+      theme: template.theme,
+      activities: template.activities.map((activity, actIdx) => ({
+        id: `act-${dayNumber}-${actIdx + 1}`,
+        title: activity.title,
+        name: activity.title,
+        category: activity.category,
+        description: activity.description,
+        locationName: activity.locationName,
+        address: defaults.address,
+        lat: defaults.lat + (idx * 0.012) + (actIdx * 0.006),
+        lng: defaults.lng + (idx * -0.01) + (actIdx * 0.007),
+        estimatedCost: activity.estimatedCost,
+        currency: "USD",
+        confidence: 0.72,
+        verificationStatus: "ai_suggestion" as const,
+        notes: "AI suggestion. Verify hours, transit, and booking details before travel.",
+        locked: false,
+      })),
+    };
+  });
+}
+
+function getDestinationTemplates(destination: string) {
+  if (destination.toLowerCase().includes("tokyo")) {
+    return [
+      {
+        title: "Arrival, Shibuya, and first bites",
+        summary: "Ease into Tokyo with a central neighborhood walk and a memorable food stop.",
+        theme: "Arrival, orientation, food",
+        activities: [
+          templateActivity("Shibuya Crossing and Hachiko Square", "Landmark", "Start with Tokyo's most recognizable crossing, then explore nearby side streets.", "Shibuya Crossing", 0),
+          templateActivity("Shibuya Sky", "Viewpoint", "Book a timed entry for skyline views, ideally near sunset.", "Shibuya Sky", 25),
+          templateActivity("Nonbei Yokocho or Ebisu yokocho dinner", "Food", "Try a compact alley dinner area with izakaya-style small plates.", "Nonbei Yokocho", 45),
+        ],
+      },
+      {
+        title: "Markets, gardens, and Ginza",
+        summary: "Pair food-focused exploring with a classic garden and polished city evening.",
+        theme: "Food, gardens, city lights",
+        activities: [
+          templateActivity("Tsukiji Outer Market breakfast", "Food", "Sample seafood skewers, tamago, and coffee while the market is lively.", "Tsukiji Outer Market", 30),
+          templateActivity("Hamarikyu Gardens", "Nature", "Walk the tidal pond gardens and pause at the teahouse.", "Hamarikyu Gardens", 10),
+          templateActivity("Ginza galleries and depachika food halls", "Museum", "Browse design shops, small galleries, and basement food halls for dinner ideas.", "Ginza", 35),
+        ],
+      },
+      {
+        title: "Museums and modern Tokyo",
+        summary: "A culture-heavy day built around specific museums and neighborhoods.",
+        theme: "Museums, design, neighborhoods",
+        activities: [
+          templateActivity("teamLab Planets Toyosu", "Museum", "Reserve ahead for the immersive digital art experience.", "teamLab Planets Toyosu", 35),
+          templateActivity("Kiyosumi Shirakawa coffee walk", "Food", "Explore roasteries and calm streets after the museum.", "Kiyosumi Shirakawa", 18),
+          templateActivity("Mori Art Museum or Roppongi Hills", "Museum", "Finish with contemporary art and city views in Roppongi.", "Mori Art Museum", 30),
+        ],
+      },
+      {
+        title: "Asakusa, Ueno, and old Tokyo",
+        summary: "Historic temples, museum options, and relaxed evening food.",
+        theme: "History, museums, street food",
+        activities: [
+          templateActivity("Senso-ji Temple and Nakamise-dori", "Landmark", "Visit early if possible, then snack along the shopping street.", "Senso-ji Temple", 10),
+          templateActivity("Tokyo National Museum in Ueno Park", "Museum", "Focus on the Japanese Gallery if time is limited.", "Tokyo National Museum", 20),
+          templateActivity("Ameyoko Market dinner crawl", "Food", "Explore casual stalls and izakaya under the rail tracks.", "Ameyoko Market", 35),
+        ],
+      },
+      {
+        title: "Harajuku, Meiji, and final favorites",
+        summary: "Mix a peaceful shrine, youth culture, and a final memorable meal.",
+        theme: "Culture, shopping, food",
+        activities: [
+          templateActivity("Meiji Shrine", "Landmark", "Walk through the forested approach and visit the shrine before crowds build.", "Meiji Shrine", 0),
+          templateActivity("Harajuku and Omotesando", "Shopping", "Explore design stores, street fashion, and cafes.", "Omotesando", 20),
+          templateActivity("Shinjuku ramen or Golden Gai evening", "Food", "Choose a ramen shop or compact bar area for a final night out.", "Shinjuku", 40),
+        ],
+      },
+    ];
+  }
+
+  return [
+    {
+      title: "Arrival and neighborhood orientation",
+      summary: `Start in ${destination} with a real landmark, an easy walk, and a local dinner area.`,
+      theme: "Arrival, orientation, food",
+      activities: [
+        templateActivity(`${destination} central landmark`, "Landmark", `Begin at a central, easy-to-find landmark in ${destination}.`, `${destination} central landmark`, 0),
+        templateActivity(`${destination} historic quarter walk`, "Walking", "Use this as a flexible orientation route with coffee and photo stops.", `${destination} historic quarter`, 10),
+        templateActivity(`${destination} local food district`, "Food", "Pick a well-reviewed restaurant cluster near your base.", `${destination} food district`, 40),
+      ],
+    },
+    {
+      title: "Culture, food, and viewpoints",
+      summary: "A fuller day with a specific cultural stop, local food, and a scenic finish.",
+      theme: "Culture, food, views",
+      activities: [
+        templateActivity(`${destination} signature museum`, "Museum", "Choose the city's best-fit museum for your interests.", `${destination} signature museum`, 25),
+        templateActivity(`${destination} market or cafe district`, "Food", "Build lunch around a market, cafe street, or casual local favorite.", `${destination} market district`, 25),
+        templateActivity(`${destination} sunset viewpoint`, "Viewpoint", "End with a viewpoint and keep dinner nearby to reduce transit.", `${destination} viewpoint`, 0),
+      ],
+    },
+    {
+      title: "Local neighborhoods and flexible finds",
+      summary: "A slower day for neighborhoods, shopping, parks, and an easy evening.",
+      theme: "Neighborhoods, parks, flexible time",
+      activities: [
+        templateActivity(`${destination} creative neighborhood`, "Neighborhood", "Explore boutiques, cafes, and side streets.", `${destination} creative neighborhood`, 15),
+        templateActivity(`${destination} park or waterfront`, "Nature", "Add a calmer outdoor break between busier stops.", `${destination} park`, 0),
+        templateActivity(`${destination} memorable dinner`, "Food", "Choose a specific restaurant after checking hours and reservations.", `${destination} restaurant area`, 50),
+      ],
+    },
+  ];
+}
+
+function templateActivity(
+  title: string,
+  category: string,
+  description: string,
+  locationName: string,
+  estimatedCost: number,
+) {
+  return { title, category, description, locationName, estimatedCost };
 }
 
 export function normalizeTrip(input: unknown, fallbackPrompt = "Trip plan", fallbackId?: string): Trip {
@@ -272,20 +317,22 @@ export function normalizeTrip(input: unknown, fallbackPrompt = "Trip plan", fall
   };
   const fallback = buildMockTrip(fallbackPrompt, fallbackId);
   const rawDays = Array.isArray(raw?.days) ? raw.days : [];
-  const numDays = Math.max(1, Number(raw?.numDays ?? rawDays.length ?? fallback.days.length));
+  const requestedDays = parseTripLengthDays(fallbackPrompt);
+  const numDays = Math.max(1, Number(requestedDays ?? raw?.tripLengthDays ?? raw?.numDays ?? rawDays.length ?? fallback.days.length));
 
   const days = Array.from({ length: numDays }, (_, idx) => {
     const rawDay = (rawDays[idx] ?? {}) as { [key: string]: unknown };
     const rawActivities = Array.isArray(rawDay.activities) ? rawDay.activities : [];
     const fallbackDay = fallback.days[idx] ?? fallback.days[fallback.days.length - 1];
+    const useFallbackActivities = !rawActivities.length || activitiesLookGeneric(rawActivities);
     return {
       id: stringOr(rawDay.id, `day${idx + 1}`),
       dayNumber: Number(rawDay.dayNumber ?? idx + 1),
       date: stringOr(rawDay.date, `Day ${idx + 1}`),
       theme: optionalString(rawDay.theme),
-      activities: rawActivities.length
-        ? rawActivities.map((activity, actIdx) => normalizeActivity(activity, idx, actIdx))
-        : fallbackDay.activities,
+      activities: useFallbackActivities
+        ? fallbackDay.activities
+        : rawActivities.map((activity, actIdx) => normalizeActivity(activity, idx, actIdx)),
     };
   });
 
@@ -316,6 +363,24 @@ export function normalizeTrip(input: unknown, fallbackPrompt = "Trip plan", fall
   });
 
   return parsed.success ? parsed.data : fallback;
+}
+
+function activitiesLookGeneric(activities: unknown[]) {
+  const genericTerms = [
+    "base hotel",
+    "neighborhood walk",
+    "local dinner reservation",
+    "morning market or cafe stop",
+    "signature museum or historic site",
+    "sunset viewpoint",
+    "central market or cafe",
+    "restaurant near hotel",
+  ];
+  const titles = activities.map((activity) => {
+    const raw = (activity ?? {}) as { title?: unknown; name?: unknown; locationName?: unknown };
+    return `${raw.title ?? ""} ${raw.name ?? ""} ${raw.locationName ?? ""}`.toLowerCase();
+  });
+  return titles.length > 0 && titles.filter((title) => genericTerms.some((term) => title.includes(term))).length >= Math.ceil(titles.length / 2);
 }
 
 function normalizeActivity(input: unknown, dayIdx: number, actIdx: number): Activity {
@@ -361,6 +426,11 @@ function optionalString(value: unknown) {
 function numberOr(value: unknown, fallback?: number) {
   const next = typeof value === "string" ? Number(value) : value;
   return typeof next === "number" && Number.isFinite(next) ? next : fallback;
+}
+
+function clampDays(value: number) {
+  if (!Number.isFinite(value)) return undefined;
+  return Math.min(21, Math.max(1, Math.round(value)));
 }
 
 function titleCase(value: string) {

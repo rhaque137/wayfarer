@@ -52,6 +52,7 @@ function LoginPageContent() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(authError);
   const [success, setSuccess] = useState<string | null>(null);
+  const authEnabled = Boolean(supabase);
 
   useEffect(() => {
     if (!loading && user) {
@@ -60,7 +61,7 @@ function LoginPageContent() {
   }, [user, loading, router, nextPath]);
 
   useEffect(() => {
-    if (provider === "google" && !user && !loading) {
+    if (provider === "google" && authEnabled && !user && !loading) {
       void runGoogle();
     }
     // run once per query-state mount
@@ -194,33 +195,48 @@ function LoginPageContent() {
 
         <section className="flex w-full items-center justify-center bg-[#fff4f3] p-6 md:w-1/2 md:p-12 lg:w-2/5 lg:p-20">
           <div className="w-full max-w-md">
-            <div className="mb-10">
-              <h1 className="text-5xl font-extrabold tracking-tight text-[#4d2124]">Welcome back</h1>
-              <p className="mt-3 text-2xl text-[#834c4f]">Please enter your details to continue your journey.</p>
+            <div className="mb-8">
+              <h1 className="text-4xl font-extrabold tracking-tight text-[#4d2124] md:text-5xl">
+                {tab === "signup" ? "Create your account" : "Plan a complete, editable trip in minutes."}
+              </h1>
+              <p className="mt-3 text-lg leading-relaxed text-[#834c4f] md:text-xl">
+                Start as a guest on this device, then create a free account later for cloud sync and sharing.
+              </p>
             </div>
 
-            <button
-              onClick={runGoogle}
-              disabled={pending}
-              aria-label="Continue with Google"
-              aria-busy={pending}
-              title={supabase ? "Continue with Google" : "Authentication is not configured."}
-              className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#df9c9e]/20 bg-white py-3.5 text-lg font-semibold text-[#4d2124] shadow-[0_12px_32px_rgba(77,33,36,0.06)] transition hover:bg-[#ffedec] disabled:opacity-70"
+            <Link
+              href="/try"
+              className="flex min-h-12 w-full items-center justify-center rounded-xl bg-[#b22005] px-5 py-4 text-lg font-bold text-[#ffefec] shadow-[0_12px_32px_rgba(178,32,5,0.16)] transition hover:bg-[#9e1700]"
             >
-              {pending ? <Spinner /> : GOOGLE_ICON}
-              {pending ? "Redirecting to Google..." : "Continue with Google"}
-            </button>
+              Continue as guest
+            </Link>
+            <p className="mt-3 text-sm leading-relaxed text-[#834c4f]">
+              No credit card. Guest trips save on this device. Create an account later for cloud sync.
+            </p>
 
-            <div className="relative my-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-[#df9c9e]/30" />
-              </div>
-              <div className="relative flex justify-center text-sm font-bold uppercase tracking-[0.2em] text-[#834c4f]/70">
-                <span className="bg-[#fff4f3] px-3">or use email</span>
-              </div>
-            </div>
+            {authEnabled ? (
+              <>
+                <button
+                  onClick={runGoogle}
+                  disabled={pending}
+                  aria-label="Continue with Google"
+                  aria-busy={pending}
+                  className="mt-6 flex min-h-12 w-full items-center justify-center gap-3 rounded-xl border border-[#df9c9e]/20 bg-white py-3.5 text-base font-semibold text-[#4d2124] shadow-[0_12px_32px_rgba(77,33,36,0.06)] transition hover:bg-[#ffedec] disabled:opacity-70"
+                >
+                  {pending ? <Spinner /> : GOOGLE_ICON}
+                  {pending ? "Redirecting to Google..." : "Continue with Google"}
+                </button>
 
-            <form onSubmit={tab === "login" ? runEmailLogin : runEmailSignup} className="space-y-5">
+                <div className="relative my-8">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-[#df9c9e]/30" />
+                  </div>
+                  <div className="relative flex justify-center text-sm font-bold uppercase tracking-[0.2em] text-[#834c4f]/70">
+                    <span className="bg-[#fff4f3] px-3">or use email</span>
+                  </div>
+                </div>
+
+                <form onSubmit={tab === "login" ? runEmailLogin : runEmailSignup} className="space-y-5">
               {tab === "signup" && (
                 <div>
                   <label htmlFor="login-full-name" className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-[#834c4f]">
@@ -231,6 +247,7 @@ function LoginPageContent() {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Alex Traveler"
+                    autoComplete="name"
                     className="w-full rounded-xl border-none bg-[#ffedec] px-4 py-4 text-lg text-[#4d2124] outline-none transition placeholder:text-[#834c4f]/60 focus:bg-white focus:ring-0"
                   />
                 </div>
@@ -246,6 +263,7 @@ function LoginPageContent() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="alex@voyager.com"
+                  autoComplete="email"
                   required
                   className="w-full rounded-xl border-none bg-[#ffedec] px-4 py-4 text-lg text-[#4d2124] outline-none transition placeholder:text-[#834c4f]/60 focus:bg-white focus:ring-0"
                 />
@@ -274,6 +292,7 @@ function LoginPageContent() {
                   required
                   minLength={tab === "signup" ? 8 : undefined}
                   placeholder="••••••••"
+                  autoComplete={tab === "signup" ? "new-password" : "current-password"}
                   className="w-full rounded-xl border-none bg-[#ffedec] px-4 py-4 text-lg text-[#4d2124] outline-none transition placeholder:text-[#834c4f]/60 focus:bg-white focus:ring-0"
                 />
               </div>
@@ -289,9 +308,9 @@ function LoginPageContent() {
               >
                 {pending ? "Please wait..." : tab === "login" ? "Log In" : "Create Account"}
               </button>
-            </form>
+                </form>
 
-            <div className="mt-8 border-t border-[#df9c9e]/20 pt-6 text-center text-lg text-[#834c4f]">
+                <div className="mt-8 border-t border-[#df9c9e]/20 pt-6 text-center text-lg text-[#834c4f]">
               {tab === "login" ? (
                 <>
                   Don&apos;t have an account?{" "}
@@ -307,7 +326,13 @@ function LoginPageContent() {
                   </Link>
                 </>
               )}
-            </div>
+                </div>
+              </>
+            ) : (
+              <div className="mt-6 rounded-2xl border border-[#df9c9e]/30 bg-white/70 p-4 text-sm leading-relaxed text-[#834c4f]">
+                Account login is currently hidden because cloud auth is not configured. You can still use Wayfarer as a guest and save trips locally on this device.
+              </div>
+            )}
 
             <div className="mt-10 text-center">
               <div className="mb-2 flex items-center justify-center gap-2">
@@ -319,7 +344,7 @@ function LoginPageContent() {
               <p className="mx-auto max-w-xs text-[11px] leading-relaxed text-[#834c4f]/40">
                 By logging in, you agree to Wayfarer&apos;s Terms of Service and Privacy Policy. Securely encrypted.
               </p>
-              <Link href="/" className="mt-6 inline-block text-sm font-semibold text-[#834c4f] hover:text-[#b22005]">
+              <Link href="/try" className="mt-6 inline-block text-sm font-semibold text-[#834c4f] hover:text-[#b22005]">
                 Continue as guest
               </Link>
             </div>
