@@ -4,10 +4,8 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Reveal } from "@/components/home/Reveal";
 import { cn } from "@/lib/utils";
-import { Tilt3D } from "@/components/ui/3d-card";
 import { PLACEHOLDER_IMAGE, getDestinationImage } from "@/lib/destination-images";
 import { CREATE_TRIP_ERROR_MESSAGE } from "@/lib/trip-limits";
-import { useImageFallback } from "@/lib/use-image-fallback";
 
 const destinations = [
   {
@@ -82,7 +80,7 @@ export function DestinationGrid() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [creatingDestination, setCreatingDestination] = useState<string | null>(null);
   const [createTripError, setCreateTripError] = useState<string | null>(null);
-  useImageFallback();
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
   const filtered = useMemo(() => {
     if (!selectedCategory) return destinations;
@@ -131,7 +129,7 @@ export function DestinationGrid() {
                 setSelectedCategory((prev) => (prev === chip.key ? null : chip.key))
               }
               className={cn(
-                "rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm transition-all duration-200",
+                "rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm transition-colors duration-200",
                 "cursor-pointer",
                 selectedCategory === chip.key
                   ? "border-[#E8472A] bg-[#E8472A] text-white"
@@ -146,33 +144,43 @@ export function DestinationGrid() {
         {createTripError ? <div className="mt-4 text-sm font-semibold text-[#E8472A]">{createTripError}</div> : null}
 
         <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {filtered.map((dest) => (
-            <Tilt3D key={dest.name} intensity={14} hoverScale={1.02}>
+          {filtered.map((dest) => {
+            const destinationImage = getDestinationImage(dest.photoQuery);
+            const showImage =
+              Boolean(destinationImage?.url) &&
+              destinationImage?.url !== PLACEHOLDER_IMAGE.url &&
+              !failedImages[dest.slug];
+
+            return (
               <button
+                key={dest.name}
                 aria-label={`Explore ${dest.name} – ${dest.price ?? "$1,200/wk"}`}
                 onClick={() => void createTrip(dest.name)}
                 disabled={creatingDestination !== null}
-                className="group h-full w-full overflow-hidden rounded-2xl border border-neutral-200 bg-white text-left shadow-sm transition-[box-shadow,border-color,background-color] duration-200 ease-out hover:border-neutral-300 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70"
+                className="group h-full w-full overflow-hidden rounded-2xl border border-neutral-200 bg-white text-left shadow-sm transition-[border-color,box-shadow,background-color] duration-200 ease-out hover:border-neutral-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {(() => {
-                  const destinationImage = getDestinationImage(dest.photoQuery) ?? PLACEHOLDER_IMAGE;
-                  return (
-                    <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-100">
-                      <img
-                        data-destination-image
-                        src={destinationImage.url}
-                        alt={destinationImage.alt}
-                        className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.02]"
-                        onError={(e) => {
-                          e.currentTarget.src = PLACEHOLDER_IMAGE.url;
-                        }}
-                      />
-                      <div className="absolute right-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold text-neutral-800 shadow-sm">
-                        {dest.price ?? "$1,200/wk"}
-                      </div>
+                <div className="grid aspect-[16/9] w-full overflow-hidden bg-neutral-100">
+                  {showImage ? (
+                    <img
+                      data-destination-image
+                      src={destinationImage?.url}
+                      alt={destinationImage?.alt ?? `${dest.name} destination image`}
+                      className="col-start-1 row-start-1 h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.02]"
+                      onError={() => {
+                        setFailedImages((current) => ({ ...current, [dest.slug]: true }));
+                      }}
+                    />
+                  ) : (
+                    <div className="col-start-1 row-start-1 flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-100 via-rose-100 to-sky-100 px-6 text-center">
+                      <span className="text-sm font-semibold text-neutral-500">
+                        {dest.name}
+                      </span>
                     </div>
-                  );
-                })()}
+                  )}
+                  <div className="col-start-1 row-start-1 m-3 self-start justify-self-end rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold text-neutral-800 shadow-sm">
+                    {dest.price ?? "$1,200/wk"}
+                  </div>
+                </div>
                 <div className="p-4">
                   <div className="line-clamp-1 text-base font-semibold text-neutral-900">{dest.name}</div>
                   <div className="mt-1 text-xs text-neutral-500">{dest.days ? `${dest.days} day starter plan` : "Flexible itinerary"}</div>
@@ -186,13 +194,13 @@ export function DestinationGrid() {
                       </span>
                     ))}
                   </div>
-                  <div className="mt-4 text-sm font-semibold text-[#E8472A]">
+                  <div className="mt-4 text-sm font-semibold text-[#E8472A] transition-colors group-hover:text-[#c7351f]">
                     {creatingDestination === dest.name ? "Planning..." : "Plan a trip →"}
                   </div>
                 </div>
               </button>
-            </Tilt3D>
-          ))}
+            );
+          })}
           {filtered.length === 0 && (
             <div className="col-span-full rounded-2xl border border-neutral-200 bg-white p-6 text-center text-sm text-neutral-600">
               No destinations found for this category. Try another filter.

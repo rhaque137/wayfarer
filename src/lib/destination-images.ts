@@ -23,8 +23,8 @@ const image = (url: string, alt: string, attribution = "Wikimedia Commons"): Des
 const unsplash = (url: string, alt: string): DestinationImage => image(url, alt, "Unsplash");
 
 export const DESTINATION_IMAGES: DestinationRegistry = {
-  barcelona: image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/Aerial_view_of_Barcelona%2C_Spain_%2851227309370%29_edited.jpg/640px-Aerial_view_of_Barcelona%2C_Spain_%2851227309370%29_edited.jpg",
+  barcelona: unsplash(
+    "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?auto=format&fit=crop&w=900&q=80",
     "Aerial view of Barcelona, Spain",
   ),
   santorini: image(
@@ -39,24 +39,24 @@ export const DESTINATION_IMAGES: DestinationRegistry = {
     PLACEHOLDER_IMAGE.url,
     "View of the Empire State Building and New York City skyline",
   ),
-  bali: image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Pura_Bratan_Bali.jpg/640px-Pura_Bratan_Bali.jpg",
+  bali: unsplash(
+    "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=900&q=80",
     "Pura Ulun Danu Bratan temple in Bali",
   ),
-  iceland: image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/%D0%90%D0%BA%D1%83%D1%80%D0%B5%D0%B9%D1%80%D1%96_%D0%B2%D0%BB%D1%96%D1%82%D0%BA%D1%83%2C_%D0%86%D1%81%D0%BB%D0%B0%D0%BD%D0%B4%D1%96%D1%8F.jpg/640px-%D0%90%D0%BA%D1%83%D1%80%D0%B5%D0%B9%D1%80%D1%96_%D0%B2%D0%BB%D1%96%D1%82%D0%BA%D1%83%2C_%D0%86%D1%81%D0%BB%D0%B0%D0%BD%D0%B4%D1%96%D1%8F.jpg",
+  iceland: unsplash(
+    "https://images.unsplash.com/photo-1504829857797-ddff29c27927?auto=format&fit=crop&w=900&q=80",
     "Summer landscape in Akureyri, Iceland",
   ),
   lisbon: unsplash(
     "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?auto=format&fit=crop&w=900&q=80",
     "Lisbon hillside cityscape in Portugal",
   ),
-  rome: image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Trevi_Fountain%2C_Rome%2C_Italy_2_-_May_2007.jpg/640px-Trevi_Fountain%2C_Rome%2C_Italy_2_-_May_2007.jpg",
+  rome: unsplash(
+    "https://images.unsplash.com/photo-1529260830199-42c24126f198?auto=format&fit=crop&w=900&q=80",
     "Trevi Fountain in Rome, Italy",
   ),
-  copenhagen: image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/2018_-_Christiansborg_from_the_Marble_Bridge.jpg/640px-2018_-_Christiansborg_from_the_Marble_Bridge.jpg",
+  copenhagen: unsplash(
+    "https://images.unsplash.com/photo-1513622470522-26c3c8a854bc?auto=format&fit=crop&w=900&q=80",
     "Christiansborg Palace from the Marble Bridge in Copenhagen",
   ),
   paris: image(
@@ -71,8 +71,8 @@ export const DESTINATION_IMAGES: DestinationRegistry = {
     "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Palace_of_Westminster_from_the_dome_on_Methodist_Central_Hall.jpg/640px-Palace_of_Westminster_from_the_dome_on_Methodist_Central_Hall.jpg",
     "Palace of Westminster and London cityscape",
   ),
-  dubai: image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Dubai_Skyline_on_10_January_2015.jpg/640px-Dubai_Skyline_on_10_January_2015.jpg",
+  dubai: unsplash(
+    "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=900&q=80",
     "Dubai skyline with modern skyscrapers",
   ),
   sydney: image(
@@ -87,28 +87,28 @@ export const DESTINATION_IMAGES: DestinationRegistry = {
     PLACEHOLDER_IMAGE.url,
     "Jemaa el-Fnaa square in Marrakech, Morocco",
   ),
-  kyoto: image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Kiyomizu-dera_in_Kyoto-r.jpg/640px-Kiyomizu-dera_in_Kyoto-r.jpg",
+  kyoto: unsplash(
+    "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=900&q=80",
     "Kiyomizu-dera temple in Kyoto, Japan",
   ),
-  "cape-town": image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/Camps_bay_%2853460319478%29_%28cropped%29.jpg/640px-Camps_bay_%2853460319478%29_%28cropped%29.jpg",
+  "cape-town": unsplash(
+    "https://images.unsplash.com/photo-1580060839134-75a5edca2e99?auto=format&fit=crop&w=900&q=80",
     "Camps Bay and mountains in Cape Town",
   ),
-  "mexico-city": image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Mexico_City_Reforma_Skyline.jpg/640px-Mexico_City_Reforma_Skyline.jpg",
+  "mexico-city": unsplash(
+    "https://images.unsplash.com/photo-1585464231875-d9ef1f5ad396?auto=format&fit=crop&w=900&q=80",
     "Paseo de la Reforma skyline in Mexico City",
   ),
-  seoul: image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Seoul_montage.png/640px-Seoul_montage.png",
+  seoul: unsplash(
+    "https://images.unsplash.com/photo-1538485399081-7191377e8241?auto=format&fit=crop&w=900&q=80",
     "City landmarks and skyline in Seoul",
   ),
-  vancouver: image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Concord_Pacific_Master_Plan_Area.jpg/640px-Concord_Pacific_Master_Plan_Area.jpg",
+  vancouver: unsplash(
+    "https://images.unsplash.com/photo-1559511260-66a654ae982a?auto=format&fit=crop&w=900&q=80",
     "Vancouver waterfront skyline",
   ),
-  "buenos-aires": image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Avenida_9_de_Julio%2C_Buenos_Aires_%2840089810910%29.jpg/640px-Avenida_9_de_Julio%2C_Buenos_Aires_%2840089810910%29.jpg",
+  "buenos-aires": unsplash(
+    "https://images.unsplash.com/photo-1589909202802-8f4aadce1849?auto=format&fit=crop&w=900&q=80",
     "Avenida 9 de Julio in Buenos Aires",
   ),
   dublin: unsplash(
