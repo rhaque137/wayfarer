@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
-import { Reveal } from "@/components/home/Reveal";
-import { PLACEHOLDER_IMAGE } from "@/lib/destination-images";
+import { PLACEHOLDER_IMAGE, getDestinationImage } from "@/lib/destination-images";
 
 type Trip = {
   id: string;
@@ -19,8 +17,6 @@ type Trip = {
 
 export function UpcomingTrips({
   trips,
-  onPlanNew,
-  onSeeAll,
 }: {
   trips: Trip[];
   onPlanNew: () => void;
@@ -29,103 +25,116 @@ export function UpcomingTrips({
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
   return (
-    <section id="upcoming" className="mx-auto w-full max-w-6xl px-6 py-16">
-      <Reveal>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="text-2xl font-semibold text-neutral-900">Your Upcoming Adventures</div>
-            <div className="text-sm text-neutral-500">Pick up where you left off</div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onSeeAll}
-              className="text-sm font-medium text-[#E8472A] transition-opacity duration-200 hover:opacity-80"
-            >
-              See all
-            </button>
-            <button
-              onClick={onPlanNew}
-              className="rounded-full bg-foreground px-4 py-2 text-xs font-semibold text-white transition-opacity duration-200 hover:opacity-90"
-            >
-              + Plan new trip
-            </button>
-          </div>
+    <section id="upcoming" className="mx-auto w-full max-w-6xl px-6 py-12">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-neutral-950">Your Upcoming Adventures</h2>
+          <p className="mt-1 text-sm text-neutral-500">Pick up where you left off</p>
         </div>
-      </Reveal>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/trips"
+            className="text-sm font-semibold text-[#E8472A] transition-colors duration-200 hover:text-[#c7351f]"
+          >
+            See all
+          </Link>
+          <Link
+            href="/#top"
+            className="rounded-full bg-neutral-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors duration-200 hover:bg-neutral-800"
+          >
+            + Plan new trip
+          </Link>
+        </div>
+      </div>
 
-      <Reveal delay={120}>
-        {trips.length === 0 ? (
-          <div className="mt-8 rounded-2xl border border-neutral-200 bg-white p-8 text-center shadow-sm">
-            <div className="text-3xl">🧭</div>
-            <div className="mt-2 text-base font-semibold">No trips yet — let’s plan your first one!</div>
-            <div className="mt-1 text-sm text-neutral-500">Wayfarer can build a full itinerary in minutes.</div>
-            <button
-              onClick={onPlanNew}
-              className="mt-4 rounded-full bg-foreground px-5 py-2 text-xs font-semibold text-white transition-opacity duration-200 hover:opacity-90"
-            >
-              Start Planning →
-            </button>
-          </div>
+      {trips.length === 0 ? (
+        <div className="rounded-2xl border border-neutral-200 bg-white p-8 text-center shadow-sm">
+          <div className="text-3xl">🧭</div>
+          <div className="mt-2 text-base font-semibold text-neutral-950">No trips yet — let’s plan your first one!</div>
+          <div className="mt-1 text-sm text-neutral-500">Wayfarer can build a full itinerary in minutes.</div>
+          <Link
+            href="/#top"
+            className="mt-4 inline-flex rounded-full bg-neutral-950 px-5 py-2 text-xs font-semibold text-white transition-colors duration-200 hover:bg-neutral-800"
+          >
+            Start Planning →
+          </Link>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          {trips.map((trip) => (
+            <UpcomingAdventureCard
+              key={trip.id}
+              trip={trip}
+              imageFailed={Boolean(failedImages[trip.id])}
+              onImageError={() => {
+                setFailedImages((current) => ({ ...current, [trip.id]: true }));
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function UpcomingAdventureCard({
+  trip,
+  imageFailed,
+  onImageError,
+}: {
+  trip: Trip;
+  imageFailed: boolean;
+  onImageError: () => void;
+}) {
+  const destinationImage =
+    getDestinationImage(trip.name) ??
+    getDestinationImage(trip.destination);
+  const coverImage =
+    destinationImage?.url ??
+    (trip.coverImage && trip.coverImage !== PLACEHOLDER_IMAGE.url ? trip.coverImage : null);
+  const imageAlt = destinationImage?.alt ?? `${trip.name} destination image`;
+  const showImage = Boolean(coverImage) && !imageFailed;
+
+  return (
+    <Link
+      href={`/trip/${trip.id}/chat/main${trip.query ? `?q=${encodeURIComponent(trip.query)}` : ""}`}
+      aria-label={`View trip: ${trip.name}${trip.dates ? `, ${trip.dates}` : ""}`}
+      className="group block h-full overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-neutral-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15"
+    >
+      <div className="grid aspect-[16/9] w-full overflow-hidden bg-neutral-100">
+        {showImage ? (
+          <img
+            data-destination-image
+            src={coverImage ?? undefined}
+            alt={imageAlt}
+            className="col-start-1 row-start-1 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+            onError={onImageError}
+          />
         ) : (
-          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2">
-            {trips.map((trip) => {
-              const hasImage =
-                Boolean(trip.coverImage) &&
-                trip.coverImage !== PLACEHOLDER_IMAGE.url &&
-                !failedImages[trip.id];
-
-              return (
-                <Link
-                  key={trip.id}
-                  href={`/trip/${trip.id}/chat/main${trip.query ? `?q=${encodeURIComponent(trip.query)}` : ""}`}
-                  aria-label={`View trip: ${trip.name}${trip.dates ? `, ${trip.dates}` : ""}`}
-                  className="group block h-full overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition-[box-shadow,border-color] duration-200 ease-out hover:border-neutral-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-[#E8472A]/20"
-                >
-                  <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-100">
-                    {hasImage ? (
-                      <img
-                        data-destination-image
-                        src={trip.coverImage}
-                        alt={`Travel photo for ${trip.destination}`}
-                        className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.015]"
-                        onError={() => {
-                          setFailedImages((current) => ({ ...current, [trip.id]: true }));
-                        }}
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-100 via-rose-100 to-sky-100 px-6 text-center">
-                        <span className="text-sm font-semibold text-neutral-500">
-                          {trip.destination}
-                        </span>
-                      </div>
-                    )}
-                    <div
-                      className={cn(
-                        "absolute left-3 top-3 rounded-full px-2.5 py-1 text-xs font-semibold text-white shadow-sm",
-                        trip.countdown === "Next week" && "bg-amber-500",
-                        trip.countdown === "In 3 months" && "bg-[#7C4DFF]",
-                        trip.countdown !== "Next week" && trip.countdown !== "In 3 months" && "bg-neutral-700",
-                      )}
-                    >
-                      {trip.countdown ?? "Soon"}
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <div className="line-clamp-1 text-base font-semibold text-neutral-900">{trip.name}</div>
-                    <div className="mt-1 line-clamp-1 text-xs text-neutral-500">{trip.dates ?? trip.destination}</div>
-                    <div className="mt-3 inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600">
-                      {trip.savedCount ?? 8} saved places
-                    </div>
-                    <div className="mt-4 text-sm font-semibold text-[#E8472A]">
-                      View Trip
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
+          <div className="col-start-1 row-start-1 flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-100 via-rose-100 to-sky-100 px-6 text-center">
+            <span className="text-sm font-semibold text-neutral-500">
+              {trip.destination}
+            </span>
           </div>
         )}
-      </Reveal>
-    </section>
+
+        {trip.countdown ? (
+          <div className="col-start-1 row-start-1 m-3 self-start justify-self-start rounded-full bg-neutral-950/80 px-3 py-1 text-xs font-semibold text-white shadow-sm backdrop-blur">
+            {trip.countdown}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="p-4">
+        <h3 className="line-clamp-1 text-base font-semibold text-neutral-950">{trip.name}</h3>
+        <p className="mt-1 text-sm text-neutral-500">{trip.dates ?? trip.destination}</p>
+        <div className="mt-3 inline-flex rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600">
+          {trip.savedCount ?? 8} saved places
+        </div>
+        <div className="mt-4 text-sm font-semibold text-[#E8472A] transition-colors group-hover:text-[#c7351f]">
+          View trip
+        </div>
+      </div>
+    </Link>
   );
 }
