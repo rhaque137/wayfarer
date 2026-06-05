@@ -75,34 +75,39 @@ export function TravelGuides() {
 
       <Reveal delay={120}>
         {createTripError ? <div className="mt-6 text-sm font-semibold text-[#E8472A]">{createTripError}</div> : null}
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filteredGuides.map((guide) => (
             <Tilt3D key={guide.city} intensity={12} hoverScale={1.02}>
               <button
                 aria-label={`Open ${guide.city} ${guide.label} guide`}
                 onClick={() => void createTrip(guide.city, guide.prompt)}
                 disabled={creatingGuide !== null}
-                className="group relative w-full overflow-hidden rounded-2xl border border-neutral-100 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                className="group h-full w-full overflow-hidden rounded-2xl border border-neutral-200 bg-white text-left shadow-sm transition-[box-shadow,border-color,background-color] duration-200 ease-out hover:border-neutral-300 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {(() => {
                   const destinationImage = getDestinationImage(guide.city) ?? PLACEHOLDER_IMAGE;
                   return (
-                <img
-                  data-destination-image
-                  src={destinationImage.url}
-                  alt={destinationImage.alt}
-                  className="h-44 w-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src = PLACEHOLDER_IMAGE.url;
-                  }}
-                />
+                    <div className="aspect-[16/9] w-full overflow-hidden bg-neutral-100">
+                      <img
+                        data-destination-image
+                        src={destinationImage.url}
+                        alt={destinationImage.alt}
+                        className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.02]"
+                        onError={(e) => {
+                          e.currentTarget.src = PLACEHOLDER_IMAGE.url;
+                        }}
+                      />
+                    </div>
                   );
                 })()}
                 <div className="p-4 text-left">
-                  <div className="text-sm font-semibold text-neutral-900">{guide.city}</div>
-                  <div className="text-xs text-neutral-500">{guide.label}</div>
-                  <div className="mt-3 text-sm font-semibold text-[#E8472A] transition-all duration-200 group-hover:translate-x-1">
-                    {creatingGuide === guide.city ? "Planning..." : "→"}
+                  <div className="line-clamp-1 text-base font-semibold text-neutral-900">{guide.city}</div>
+                  <div className="mt-1 text-xs text-neutral-500">{guide.label}</div>
+                  <div className="mt-3 inline-flex rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600">
+                    Curated guide
+                  </div>
+                  <div className="mt-4 text-sm font-semibold text-[#E8472A]">
+                    {creatingGuide === guide.city ? "Planning..." : "View guide"}
                   </div>
                 </div>
               </button>

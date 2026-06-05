@@ -45,11 +45,12 @@ function LoginPageContent() {
   const tab = searchParams.get("tab") === "signup" ? "signup" : "login";
   const provider = searchParams.get("provider");
   const nextPath = searchParams.get("next") ?? "/trips";
+  const authError = searchParams.get("error");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(authError);
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
@@ -82,6 +83,10 @@ function LoginPageContent() {
           redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(
             nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/trips",
           )}`,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
         },
       });
 
@@ -149,7 +154,7 @@ function LoginPageContent() {
       return;
     }
     setPending(true);
-      setError(null);
+    setError(null);
     setSuccess(null);
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/callback?type=recovery&next=${encodeURIComponent("/login")}`,
@@ -199,10 +204,11 @@ function LoginPageContent() {
               disabled={pending}
               aria-label="Continue with Google"
               aria-busy={pending}
+              title={supabase ? "Continue with Google" : "Authentication is not configured."}
               className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#df9c9e]/20 bg-white py-3.5 text-lg font-semibold text-[#4d2124] shadow-[0_12px_32px_rgba(77,33,36,0.06)] transition hover:bg-[#ffedec] disabled:opacity-70"
             >
               {pending ? <Spinner /> : GOOGLE_ICON}
-              Continue with Google
+              {pending ? "Redirecting to Google..." : "Continue with Google"}
             </button>
 
             <div className="relative my-8">

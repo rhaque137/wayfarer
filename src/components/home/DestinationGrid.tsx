@@ -145,50 +145,50 @@ export function DestinationGrid() {
         </div>
         {createTripError ? <div className="mt-4 text-sm font-semibold text-[#E8472A]">{createTripError}</div> : null}
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 transition-all duration-300">
+        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {filtered.map((dest) => (
             <Tilt3D key={dest.name} intensity={14} hoverScale={1.02}>
               <button
                 aria-label={`Explore ${dest.name} – ${dest.price ?? "$1,200/wk"}`}
                 onClick={() => void createTrip(dest.name)}
                 disabled={creatingDestination !== null}
-                className="group relative w-full overflow-hidden rounded-2xl border border-neutral-100 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                className="group h-full w-full overflow-hidden rounded-2xl border border-neutral-200 bg-white text-left shadow-sm transition-[box-shadow,border-color,background-color] duration-200 ease-out hover:border-neutral-300 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {(() => {
                   const destinationImage = getDestinationImage(dest.photoQuery) ?? PLACEHOLDER_IMAGE;
                   return (
-                <img
-                  data-destination-image
-                  src={destinationImage.url}
-                  alt={destinationImage.alt}
-                  className="h-52 w-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src = PLACEHOLDER_IMAGE.url;
-                  }}
-                />
+                    <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-100">
+                      <img
+                        data-destination-image
+                        src={destinationImage.url}
+                        alt={destinationImage.alt}
+                        className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.02]"
+                        onError={(e) => {
+                          e.currentTarget.src = PLACEHOLDER_IMAGE.url;
+                        }}
+                      />
+                      <div className="absolute right-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold text-neutral-800 shadow-sm">
+                        {dest.price ?? "$1,200/wk"}
+                      </div>
+                    </div>
                   );
                 })()}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent transition-all duration-200 group-hover:from-black/85 group-hover:via-black/45" />
-                <div className="absolute right-3 top-3 rounded-full bg-[#E8472A] px-2 py-1 text-xs font-semibold text-white shadow-sm">
-                  {dest.price ?? "$1,200/wk"}
-                </div>
-                <div className="absolute bottom-3 left-3 text-left text-white">
-                  <div className="text-sm font-semibold">{dest.name}</div>
+                <div className="p-4">
+                  <div className="line-clamp-1 text-base font-semibold text-neutral-900">{dest.name}</div>
+                  <div className="mt-1 text-xs text-neutral-500">{dest.days ? `${dest.days} day starter plan` : "Flexible itinerary"}</div>
                   <div className="mt-1 flex flex-wrap gap-1">
                     {dest.categories.slice(0, 2).map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full border border-white/30 bg-white/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur"
+                        className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-600"
                       >
                         {tag.replace("-", " ")}
                       </span>
                     ))}
                   </div>
-                </div>
-                <div className="absolute bottom-12 right-3 opacity-0 transition-all duration-200 group-hover:opacity-100">
-                  <span className="rounded-full bg-[#E8472A] px-3 py-1 text-xs font-semibold text-white shadow-md">
+                  <div className="mt-4 text-sm font-semibold text-[#E8472A]">
                     {creatingDestination === dest.name ? "Planning..." : "Plan a trip →"}
-                  </span>
+                  </div>
                 </div>
               </button>
             </Tilt3D>

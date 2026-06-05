@@ -12,10 +12,15 @@ export const PLACEHOLDER_IMAGE: DestinationImage = {
 };
 
 const image = (url: string, alt: string, attribution = "Wikimedia Commons"): DestinationImage => ({
-  url: url.startsWith("/") ? url : PLACEHOLDER_IMAGE.url,
+  url: url.startsWith("/") || url.startsWith("https://images.unsplash.com/") ? url : PLACEHOLDER_IMAGE.url,
   alt,
-  attribution: url.startsWith("/") ? attribution : "Local Wayfarer fallback",
+  attribution:
+    url.startsWith("/") || url.startsWith("https://images.unsplash.com/")
+      ? attribution
+      : "Local Wayfarer fallback",
 });
+
+const unsplash = (url: string, alt: string): DestinationImage => image(url, alt, "Unsplash");
 
 export const DESTINATION_IMAGES: DestinationRegistry = {
   barcelona: image(
@@ -42,9 +47,9 @@ export const DESTINATION_IMAGES: DestinationRegistry = {
     "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/%D0%90%D0%BA%D1%83%D1%80%D0%B5%D0%B9%D1%80%D1%96_%D0%B2%D0%BB%D1%96%D1%82%D0%BA%D1%83%2C_%D0%86%D1%81%D0%BB%D0%B0%D0%BD%D0%B4%D1%96%D1%8F.jpg/640px-%D0%90%D0%BA%D1%83%D1%80%D0%B5%D0%B9%D1%80%D1%96_%D0%B2%D0%BB%D1%96%D1%82%D0%BA%D1%83%2C_%D0%86%D1%81%D0%BB%D0%B0%D0%BD%D0%B4%D1%96%D1%8F.jpg",
     "Summer landscape in Akureyri, Iceland",
   ),
-  lisbon: image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Lisboa_-_Portugal_%2852597836992%29.jpg/640px-Lisboa_-_Portugal_%2852597836992%29.jpg",
-    "Lisbon city view in Portugal",
+  lisbon: unsplash(
+    "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?auto=format&fit=crop&w=900&q=80",
+    "Lisbon hillside cityscape in Portugal",
   ),
   rome: image(
     "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Trevi_Fountain%2C_Rome%2C_Italy_2_-_May_2007.jpg/640px-Trevi_Fountain%2C_Rome%2C_Italy_2_-_May_2007.jpg",
@@ -106,6 +111,14 @@ export const DESTINATION_IMAGES: DestinationRegistry = {
     "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Avenida_9_de_Julio%2C_Buenos_Aires_%2840089810910%29.jpg/640px-Avenida_9_de_Julio%2C_Buenos_Aires_%2840089810910%29.jpg",
     "Avenida 9 de Julio in Buenos Aires",
   ),
+  dublin: unsplash(
+    "https://images.unsplash.com/photo-1513735492246-483525079686?auto=format&fit=crop&w=900&q=80",
+    "Aerial view over Dublin city and the River Liffey",
+  ),
+  prague: unsplash(
+    "https://images.unsplash.com/photo-1519677100203-a0e668c92439?auto=format&fit=crop&w=900&q=80",
+    "Prague city skyline with historic bridges and red rooftops",
+  ),
 };
 
 const ALIASES: Record<string, string> = {
@@ -118,6 +131,11 @@ const ALIASES: Record<string, string> = {
   "cape town": "cape-town",
   "mexico city": "mexico-city",
   "buenos aires": "buenos-aires",
+  "praha": "prague",
+  "dublin adventure": "dublin",
+  "lisbon starter plan": "lisbon",
+  "prague city break": "prague",
+  "prague city escape": "prague",
 };
 
 function normalizeDestination(value: string) {

@@ -176,16 +176,20 @@ export default function Home() {
     () =>
       recentTrips.map((trip, idx) => {
         const cityOnly = trip.destination.split(",")[0]?.trim() || trip.destination;
+        const curatedImage =
+          getDestinationImage(trip.name) ??
+          getDestinationImage(cityOnly) ??
+          getDestinationImage(trip.destination);
         return {
-        ...trip,
-        coverImage:
-          recentImages[trip.id] ??
-          RECENT_IMAGE_OVERRIDES[(trip.destination.split(",")[0]?.trim() || trip.destination).toLowerCase()] ??
-          getDestinationImage(cityOnly)?.url ??
-          PLACEHOLDER_IMAGE.url,
-        dates: ["May 12–17", "Jun 3–8", "Jul 22–29", "Sep 5–10"][idx % 4],
-        savedCount: [12, 8, 15, 6][idx % 4],
-        countdown: ["Next week", "In 3 months", "In 5 months", "Soon"][idx % 4],
+          ...trip,
+          coverImage:
+            RECENT_IMAGE_OVERRIDES[(trip.destination.split(",")[0]?.trim() || trip.destination).toLowerCase()] ??
+            curatedImage?.url ??
+            recentImages[trip.id] ??
+            PLACEHOLDER_IMAGE.url,
+          dates: ["May 12–17", "Jun 3–8", "Jul 22–29", "Sep 5–10"][idx % 4],
+          savedCount: [12, 8, 15, 6][idx % 4],
+          countdown: ["Next week", "In 3 months", "In 5 months", "Soon"][idx % 4],
         };
       }),
     [recentTrips, recentImages],

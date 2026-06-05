@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,9 +24,6 @@ export interface InteractiveTravelCardProps {
   className?: string;
 }
 
-/**
- * A responsive and theme-adaptive travel card with a 3D tilt effect on hover.
- */
 export const InteractiveTravelCard = React.forwardRef<
   HTMLDivElement,
   InteractiveTravelCardProps
@@ -36,108 +32,56 @@ export const InteractiveTravelCard = React.forwardRef<
     { title, subtitle, imageUrl, actionText, href, onActionClick, className },
     ref
   ) => {
-    // --- 3D Tilt Animation Logic ---
-    const mouseX = useMotionValue(0);
-    const mouseY = useMotionValue(0);
-
-    const springConfig = { damping: 15, stiffness: 150 };
-    const springX = useSpring(mouseX, springConfig);
-    const springY = useSpring(mouseY, springConfig);
-
-    const rotateX = useTransform(springY, [-0.5, 0.5], ["10.5deg", "-10.5deg"]);
-    const rotateY = useTransform(springX, [-0.5, 0.5], ["-10.5deg", "10.5deg"]);
-
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const { width, height, left, top } = rect;
-      const mouseXVal = e.clientX - left;
-      const mouseYVal = e.clientY - top;
-      const xPct = mouseXVal / width - 0.5;
-      const yPct = mouseYVal / height - 0.5;
-      mouseX.set(xPct);
-      mouseY.set(yPct);
-    };
-
-    const handleMouseLeave = () => {
-      mouseX.set(0);
-      mouseY.set(0);
-    };
-
     return (
-      <motion.div
+      <div
         ref={ref}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        style={{
-          rotateX,
-          rotateY,
-          transformStyle: "preserve-3d",
-        }}
         className={cn(
-          "relative h-[26rem] w-80 rounded-2xl border border-border/30 bg-transparent shadow-2xl",
+          "group relative h-[26rem] w-80 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition-[box-shadow,border-color] duration-200 hover:border-neutral-300 hover:shadow-md",
           className
         )}
       >
-        <div
-          style={{
-            transform: "translateZ(50px)",
-            transformStyle: "preserve-3d",
-          }}
-          className="absolute inset-4 grid h-[calc(100%-2rem)] w-[calc(100%-2rem)] grid-rows-[1fr_auto] rounded-xl shadow-lg"
-        >
+        <div className="absolute inset-0 grid h-full w-full grid-rows-[1fr_auto]">
           <img
             src={imageUrl}
             alt={`${title}, ${subtitle}`}
-            className="absolute inset-0 h-full w-full rounded-xl object-cover"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
           />
 
-          <div className="absolute inset-0 h-full w-full rounded-xl bg-gradient-to-b from-black/20 via-transparent to-black/60" />
+          <div className="absolute inset-0 h-full w-full bg-gradient-to-b from-black/20 via-transparent to-black/60" />
 
-          <div className="relative flex flex-col justify-between rounded-xl p-4 text-white">
+          <div className="relative flex flex-col justify-between p-4 text-white">
             <div className="flex items-start justify-between">
               <div>
-                <motion.h2
-                  style={{ transform: "translateZ(50px)" }}
-                  className="text-2xl font-bold"
-                >
+                <h2 className="text-2xl font-bold">
                   {title}
-                </motion.h2>
-                <motion.p
-                  style={{ transform: "translateZ(40px)" }}
-                  className="text-sm font-light text-white/80"
-                >
+                </h2>
+                <p className="text-sm font-light text-white/80">
                   {subtitle}
-                </motion.p>
+                </p>
               </div>
-              <motion.a
+              <a
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                whileHover={{ scale: 1.1, rotate: "2.5deg" }}
-                whileTap={{ scale: 0.9 }}
                 aria-label={`Learn more about ${title}`}
-                style={{ transform: "translateZ(60px)" }}
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm ring-1 ring-inset ring-white/30 transition-colors hover:bg-white/30"
               >
                 <ArrowUpRight className="h-5 w-5 text-white" />
-              </motion.a>
+              </a>
             </div>
 
-            <motion.button
+            <button
               onClick={onActionClick}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              style={{ transform: "translateZ(40px)" }}
               className={cn(
                 "w-full rounded-lg py-3 text-center font-semibold text-white transition-colors",
                 "bg-white/10 backdrop-blur-md ring-1 ring-inset ring-white/20 hover:bg-white/20"
               )}
             >
               {actionText}
-            </motion.button>
+            </button>
           </div>
         </div>
-      </motion.div>
+      </div>
     );
   }
 );
@@ -151,64 +95,13 @@ type Tilt3DProps = {
 };
 
 /**
- * Reusable 3D hover wrapper for existing cards.
+ * Stable wrapper kept for backwards compatibility with older card call sites.
+ * The previous implementation applied 3D rotation, scale, and lift on hover,
+ * which made grid cards overlap and images appear distorted.
  */
 export function Tilt3D({
   children,
   className,
-  intensity = 16,
-  hoverScale = 1.03,
 }: Tilt3DProps) {
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-
-  const springConfig = { damping: 14, stiffness: 180, mass: 0.4 };
-  const springX = useSpring(mouseX, springConfig);
-  const springY = useSpring(mouseY, springConfig);
-
-  const rotateX = useTransform(
-    springY,
-    [-0.5, 0.5],
-    [`${intensity}deg`, `-${intensity}deg`]
-  );
-  const rotateY = useTransform(
-    springX,
-    [-0.5, 0.5],
-    [`-${intensity}deg`, `${intensity}deg`]
-  );
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const xPct = (e.clientX - rect.left) / rect.width - 0.5;
-    const yPct = (e.clientY - rect.top) / rect.height - 0.5;
-    mouseX.set(xPct);
-    mouseY.set(yPct);
-  };
-
-  const handleMouseLeave = () => {
-    mouseX.set(0);
-    mouseY.set(0);
-  };
-
-  return (
-    <div className={cn("w-full", className)} style={{ perspective: "1200px" }}>
-      <motion.div
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        whileHover={{ scale: hoverScale, y: -8 }}
-        style={{
-          rotateX,
-          rotateY,
-          transformPerspective: 1000,
-          transformStyle: "preserve-3d",
-          willChange: "transform",
-        }}
-        className="h-full w-full transition-transform duration-200"
-      >
-        <div style={{ transform: "translateZ(24px)" }} className="h-full w-full">
-          {children}
-        </div>
-      </motion.div>
-    </div>
-  );
+  return <div className={cn("h-full w-full", className)}>{children}</div>;
 }

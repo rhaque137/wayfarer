@@ -27,10 +27,11 @@ Copy `.env.example` → `.env.local` and fill in keys.
   - `OPENAI_API_KEY`
   - `OPENAI_MODEL` (default: `gpt-4o`)
 - Supabase
-  - `SUPABASE_URL`
-  - `SUPABASE_ANON_KEY`
-  - `SUPABASE_SERVICE_ROLE_KEY` (server-only; required for `/api/save-trip`)
-  - (optional client aliases) `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  - `NEXT_PUBLIC_SUPABASE_URL` (required for browser auth)
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (required for browser auth)
+  - `SUPABASE_URL` (optional server alias)
+  - `SUPABASE_ANON_KEY` (optional server alias)
+  - `SUPABASE_SERVICE_ROLE_KEY` (server-only; required for privileged save/profile API routes)
 - Maps / public
   - `NEXT_PUBLIC_MAPBOX_TOKEN`
   - `NEXT_PUBLIC_BASE_URL`
@@ -78,7 +79,22 @@ For Google OAuth and email recovery, configure these redirect URLs in Supabase A
 - Production: `https://wayfarer-ten.vercel.app/auth/callback`
 - Local dev: `http://localhost:3000/auth/callback`
 
-The callback route completes PKCE code exchange, handles provider errors, creates or updates a `profiles` row for signed-in users, and redirects users to `/trips` by default.
+The callback route completes PKCE code exchange server-side, persists Supabase auth cookies, handles provider errors, creates or updates a `profiles` row for signed-in users, and redirects users to `/trips` by default.
+
+## Supabase Google OAuth Setup
+
+1. In Supabase, enable the Google provider under Auth Providers.
+2. Add the Google OAuth client ID and secret from Google Cloud.
+3. In Supabase Auth URL configuration, set the site URL to `https://wayfarer-ten.vercel.app`.
+4. Add redirect URLs:
+   - `http://localhost:3000/auth/callback`
+   - `https://wayfarer-ten.vercel.app/auth/callback`
+5. Add these Vercel and local environment variables:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+6. Restart the local dev server after changing `.env.local`.
+
+If the header shows `Sign in unavailable`, the public Supabase env vars are missing in Vercel or local `.env.local`.
 
 ## Notes
 

@@ -75,41 +75,50 @@ export default function TripsPage() {
         </div>
 
         {trips.length > 0 ? (
-          <div className="mt-8 grid gap-4 md:grid-cols-2">
+          <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2">
             {trips.map((trip) => {
               const image = getDestinationImage(trip.destination) ?? PLACEHOLDER_IMAGE;
               return (
-                <div key={trip.id} className="overflow-hidden rounded-2xl border border-panel-border bg-white shadow-sm">
-                  <div className="relative h-36 bg-neutral-100">
-                    <img src={image.url} alt={image.alt} className="h-full w-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    <div className="absolute bottom-3 left-3 text-white">
-                      <div className="text-lg font-semibold">{trip.title ?? trip.name ?? "Untitled trip"}</div>
-                      <div className="text-xs text-white/80">{trip.destination}</div>
-                    </div>
+                <article
+                  key={trip.id}
+                  className="group overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition-[box-shadow,border-color,background-color] duration-200 ease-out hover:border-neutral-300 hover:shadow-md"
+                >
+                  <div className="aspect-[16/9] w-full overflow-hidden bg-neutral-100">
+                    <img
+                      src={image.url}
+                      alt={image.alt}
+                      className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.02]"
+                      onError={(e) => {
+                        e.currentTarget.src = PLACEHOLDER_IMAGE.url;
+                      }}
+                    />
                   </div>
                   <div className="p-4">
-                    <div className="text-xs text-muted">
+                    <h2 className="line-clamp-1 text-base font-semibold text-neutral-900">
+                      {trip.title ?? trip.name ?? "Untitled trip"}
+                    </h2>
+                    <p className="mt-1 line-clamp-1 text-xs text-neutral-500">{trip.destination}</p>
+                    <div className="mt-3 inline-flex rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600">
                       {trip.tripLengthDays ? `${trip.tripLengthDays} days · ` : null}
                       Last updated {formatDate(trip.updatedAt ?? trip.createdAt)}
                     </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
                       <Link
                         href={`/trip/${trip.id}/chat/main${trip.query ? `?q=${encodeURIComponent(trip.query)}` : ""}`}
-                        className="rounded-full bg-foreground px-4 py-2 text-xs font-semibold text-white"
+                        className="text-sm font-semibold text-[#E8472A] transition-colors hover:text-[#c83a22]"
                       >
-                        Open trip
+                        View trip
                       </Link>
                       <button
                         type="button"
                         onClick={() => removeTrip(trip.id)}
-                        className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700"
+                        className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-600 transition-colors hover:border-neutral-300 hover:bg-neutral-50"
                       >
                         Delete
                       </button>
                     </div>
                   </div>
-                </div>
+                </article>
               );
             })}
           </div>

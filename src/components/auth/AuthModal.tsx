@@ -89,7 +89,13 @@ export function AuthModal() {
     try {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo },
+        options: {
+          redirectTo,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
+        },
       });
 
       if (oauthError) {
@@ -240,10 +246,11 @@ export function AuthModal() {
             disabled={loading}
             aria-label="Continue with Google"
             aria-busy={loading}
+            title={supabase ? "Continue with Google" : "Authentication is not configured."}
             className="flex w-full items-center justify-center gap-3 rounded-xl border border-neutral-200 bg-white py-3 text-sm font-semibold text-neutral-700 shadow-sm transition-all hover:bg-neutral-50 hover:shadow-md disabled:opacity-60"
           >
             {loading ? <Spinner /> : GOOGLE_ICON}
-            Continue with Google
+            {loading ? "Redirecting to Google..." : "Continue with Google"}
           </button>
 
           <div className="my-5 flex items-center gap-3">

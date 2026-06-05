@@ -39,6 +39,7 @@ export function UserMenu() {
         disabled
         className="rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2 text-xs font-semibold text-neutral-400"
         aria-label="Sign in unavailable"
+        title="Authentication is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY."
       >
         Sign in unavailable
       </button>
