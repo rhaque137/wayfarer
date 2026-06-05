@@ -115,37 +115,36 @@ export function DayBlock({ day, date, theme, activities, dayColorIndex = 0 }: Pr
 
   const showContent = isMobile ? true : !collapsed;
 
+  const estimatedCost = activities.reduce((sum, activity) => sum + (activity.estimatedCost ?? 0), 0);
+
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+    <section className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
       <button
         onClick={() => {
           if (isMobile) return;
           setCollapsed((v) => !v);
         }}
-        className="mb-2 flex w-full items-center justify-between text-left"
+        className="mb-3 flex w-full items-start justify-between gap-3 text-left"
       >
-        <span className="flex items-center rounded-full bg-[#F5EAE6] px-3 py-1 text-xs font-semibold text-[#E8472A]">
-          <span
-            style={{
-              display: "inline-block",
-              width: 10,
-              height: 10,
-              borderRadius: "50%",
-              background: DAY_COLORS[dayColorIndex % DAY_COLORS.length],
-              marginRight: 6,
-              flexShrink: 0,
-            }}
-          />
-          {day}
-        </span>
-        <div className="text-right">
-          {date && <span className="text-xs text-neutral-500">{date}</span>}
-          {theme && <div className="text-xs text-[#7C4DFF] font-semibold">{theme}</div>}
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              style={{ background: DAY_COLORS[dayColorIndex % DAY_COLORS.length] }}
+              className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
+            />
+            <h2 className="truncate text-base font-bold text-neutral-950">{day}{theme ? ` · ${theme}` : ""}</h2>
+          </div>
+          <div className="mt-1 text-xs text-neutral-500">
+            {activities.length} places
+            {estimatedCost ? ` · ~$${Math.round(estimatedCost)} est.` : ""}
+            {date ? ` · ${date}` : ""}
+          </div>
         </div>
         {!isMobile && <span className="ml-3 text-xs text-neutral-500">{collapsed ? "▸" : "▾"}</span>}
       </button>
       {showContent && (
-        <ul className="space-y-4">
+        <ul className="space-y-2">
         {activities.map((act, index) => {
           const next = activities[index + 1];
           const key = next ? `${act.id}__${next.id}` : "";
@@ -166,18 +165,18 @@ export function DayBlock({ day, date, theme, activities, dayColorIndex = 0 }: Pr
               />
 
               {index < activities.length - 1 && (
-                <div className="relative ml-6 pl-6">
-                  <div className="absolute left-3 top-0 bottom-0 border-l border-dashed border-neutral-300" />
-                  <div className="flex items-center gap-2 text-xs text-neutral-500">
-                    <span>🚗</span>
-                    <span>{info ? `${info.time} · ${info.distance}` : "Calculating route..."}</span>
+                <div className="relative ml-4 pl-6">
+                  <div className="absolute left-2 top-0 bottom-0 border-l border-dashed border-neutral-300" />
+                  <div className="flex min-h-8 items-center gap-2 text-xs text-neutral-500">
+                    <span aria-hidden="true">→</span>
+                    <span>{info ? `${info.time} · ${info.distance}` : "Route time pending"}</span>
                     <a
                       href={directionsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[#E8472A] underline"
+                      className="font-semibold text-[#E8472A] underline"
                     >
-                      Directions ▾
+                      Directions
                     </a>
                   </div>
                 </div>
@@ -187,7 +186,7 @@ export function DayBlock({ day, date, theme, activities, dayColorIndex = 0 }: Pr
         })}
         </ul>
       )}
-    </div>
+    </section>
   );
 }
 

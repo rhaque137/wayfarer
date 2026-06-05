@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { PanelHeader } from "@/components/ui/PanelHeader";
 import { AIChangesBanner } from "@/components/itinerary/AIChangesBanner";
 import { DayBlock } from "@/components/itinerary/DayBlock";
@@ -15,6 +16,7 @@ export function ItineraryPanel({
   onToggle?: () => void;
 }) {
   const { trip, pendingAIChanges, savedActivities, acceptChanges, rejectChanges } = useTripStore();
+  const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
 
   if (isCollapsed) {
     return <PanelHeader icon="⭐" label="Itinerary" isCollapsed onToggle={onToggle} />;
@@ -44,23 +46,20 @@ export function ItineraryPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="border-b border-neutral-200 bg-white/80 px-4 py-3 backdrop-blur">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-semibold text-neutral-700 transition-all duration-200 hover:border-[#E8472A] hover:text-[#E8472A]"
-            aria-label="Back to home"
-          >
-            Home
-          </Link>
-          <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
-            <span className="text-neutral-500">⭐</span>
-            Itinerary
+      <div className="border-b border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur">
+        <div className="flex items-start gap-3">
+          <div className="min-w-0">
+            <div className="truncate text-base font-bold text-neutral-900">
+              {trip.title ?? trip.name}
+            </div>
+            <div className="mt-0.5 text-xs text-neutral-500">
+              {trip.days.length} days · {trip.days.reduce((sum, day) => sum + day.activities.length, 0)} places
+            </div>
           </div>
           {onToggle ? (
             <button
               onClick={onToggle}
-              className="ml-auto rounded-full border border-neutral-200 p-1 text-neutral-500 transition-all duration-200 hover:border-[#E8472A] hover:text-[#E8472A]"
+              className="ml-auto hidden rounded-full border border-neutral-200 p-1 text-neutral-500 transition-colors duration-200 hover:border-[#E8472A] hover:text-[#E8472A] md:block"
               aria-label={isCollapsed ? "Expand panel" : "Collapse panel"}
             >
               ‹
@@ -69,25 +68,28 @@ export function ItineraryPanel({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
-        <div className="md:hidden">
-          <div className="text-xs font-semibold tracking-[0.2em] text-[#E8472A]">CURRENT JOURNEY</div>
-          <div className="mt-2 text-2xl font-bold text-neutral-900">{trip.destination}</div>
-          <div className="text-sm text-neutral-600">{trip.name}</div>
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
-            {trip.days.map((day, idx) => (
-              <div
-                key={day.id}
-                className={[
-                  "min-w-[64px] rounded-2xl px-3 py-2 text-center text-xs font-semibold",
-                  idx === 0
-                    ? "bg-[#E8472A] text-white shadow-sm"
-                    : "bg-white text-neutral-600 border border-neutral-200",
-                ].join(" ")}
-              >
-                DAY {day.dayNumber}
-              </div>
-            ))}
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 pb-28 md:pb-4">
+        <div className="sticky top-0 z-20 -mx-4 mb-4 border-b border-neutral-200 bg-[#FAF7F3]/95 px-4 py-2 backdrop-blur">
+          <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {trip.days.map((day) => {
+              const selected = (selectedDayId ?? trip.days[0]?.id) === day.id;
+              return (
+                <button
+                  key={day.id}
+                  type="button"
+                  onClick={() => setSelectedDayId(day.id)}
+                  className={[
+                    "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15",
+                    selected
+                      ? "bg-[#E8472A] text-white shadow-sm"
+                      : "border border-neutral-200 bg-white text-neutral-600 hover:border-[#E8472A] hover:text-[#E8472A]",
+                  ].join(" ")}
+                  aria-pressed={selected}
+                >
+                  Day {day.dayNumber}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -95,15 +97,20 @@ export function ItineraryPanel({
           <AIChangesBanner onAccept={acceptChanges} onReject={rejectChanges} />
         )}
 
-        {trip.days.map((day, dayIdx) => (
-          <DayBlock
-            key={day.id}
-            day={`DAY ${day.dayNumber}`}
-            date={day.date}
-            activities={day.activities}
-            dayColorIndex={dayIdx}
-          />
-        ))}
+        <div className="space-y-4">
+          {trip.days
+            .filter((day) => day.id === (selectedDayId ?? trip.days[0]?.id))
+            .map((day) => (
+              <DayBlock
+                key={day.id}
+                day={`Day ${day.dayNumber}`}
+                date={day.date}
+                theme={day.title ?? day.summary}
+                activities={day.activities}
+                dayColorIndex={trip.days.findIndex((item) => item.id === day.id)}
+              />
+            ))}
+        </div>
 
         {savedActivities.length > 0 && <SavedActivitiesGrid activities={savedActivities} />}
       </div>

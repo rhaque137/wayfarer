@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Activity, useTripStore } from "@/store/tripStore";
 
 type Props = {
@@ -11,345 +11,194 @@ type Props = {
   pinColor?: string;
 };
 
-export function ItineraryPlaceCard({ activity, index, destination, pinColor }: Props) {
+export function ItineraryPlaceCard({ activity, index, pinColor }: Props) {
   const {
     activeActivityId,
     setActiveActivityId,
-    setActivityPhoto,
-    updateActivity,
     removeActivity,
     toggleActivityLock,
     saveActivity,
     savedActivities,
   } = useTripStore();
+  const [expanded, setExpanded] = useState(false);
   const isActive = activeActivityId === activity.id;
   const isSaved = savedActivities.some((saved) => saved.id === activity.id);
   const hasCoords = activity.lat != null && activity.lng != null;
-  const [photoUrl, setPhotoUrl] = useState<string | null>(activity.photoUrl ?? null);
-  const [photoLoading, setPhotoLoading] = useState<boolean>(true);
-  const [expanded, setExpanded] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [draftName, setDraftName] = useState(activity.name);
-  const [draftDescription, setDraftDescription] = useState(activity.description);
-  const [draftTime, setDraftTime] = useState(activity.startTime ?? "");
-  const [draftLocation, setDraftLocation] = useState(activity.locationName ?? activity.address ?? "");
-  const [draftCost, setDraftCost] = useState(activity.estimatedCost?.toString() ?? "");
-  const [draftNotes, setDraftNotes] = useState(activity.notes ?? "");
-  const [shouldLoad, setShouldLoad] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const photoUrl = activity.photoUrl ?? activity.imageUrl ?? null;
 
   const mapsUrl = useMemo(() => {
+    if (hasCoords) {
+      return `https://www.google.com/maps/search/?api=1&query=${activity.lat},${activity.lng}`;
+    }
     const q = activity.name + (activity.address ? ` ${activity.address}` : "");
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
-  }, [activity.name, activity.address]);
+  }, [activity.name, activity.address, activity.lat, activity.lng, hasCoords]);
 
-  useEffect(() => {
-    if (!cardRef.current) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          setShouldLoad(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "200px" },
-    );
-    observer.observe(cardRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!shouldLoad || photoUrl) return;
-    let isMounted = true;
-    async function load() {
-      try {
-        setPhotoLoading(true);
-        const res = await fetch("/api/place-photo", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            placeName: activity.name,
-            address: activity.address,
-            city: destination,
-            lat: activity.lat,
-            lng: activity.lng,
-          }),
-        });
-        const data = await res.json();
-        const url = data?.photoUrl as string | undefined;
-        if (isMounted) {
-          if (url) {
-            setPhotoUrl(url);
-            setActivityPhoto(activity.id, url);
-          }
-        }
-      } catch {
-        if (isMounted) {
-          // leave photo null on failure to avoid mismatched images
-        }
-      } finally {
-        if (isMounted) setPhotoLoading(false);
-      }
-    }
-    load();
-    return () => {
-      isMounted = false;
-    };
-  }, [activity.name, destination, photoUrl, shouldLoad]);
-
-  useEffect(() => {
-    setPhotoUrl(activity.photoUrl ?? null);
-    setPhotoLoading(true);
-    setDraftName(activity.name);
-    setDraftDescription(activity.description);
-    setDraftTime(activity.startTime ?? "");
-    setDraftLocation(activity.locationName ?? activity.address ?? "");
-    setDraftCost(activity.estimatedCost?.toString() ?? "");
-    setDraftNotes(activity.notes ?? "");
-  }, [activity.id, activity.name, destination]);
-
-  const saveEdit = () => {
-    const name = draftName.trim();
-    const description = draftDescription.trim();
-    if (!name || !description) return;
-    updateActivity(activity.id, {
-      title: name,
-      name,
-      description,
-      startTime: draftTime.trim() || undefined,
-      locationName: draftLocation.trim() || undefined,
-      estimatedCost: draftCost.trim() ? Number(draftCost) || 0 : undefined,
-      notes: draftNotes.trim() || undefined,
-    });
-    setIsEditing(false);
-  };
+  const oneLine = activity.description || activity.notes || "Details need a quick check before you go.";
+  const area = (activity as Activity & { area?: string }).area ?? activity.locationName ?? activity.address;
 
   return (
-    <div
-      ref={cardRef}
-      onClick={() => {
-        setExpanded((v) => !v);
-        if (hasCoords) setActiveActivityId(isActive ? null : activity.id);
-      }}
+    <article
       className={[
-        "flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-white p-5 shadow-sm border border-neutral-200 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
-        hasCoords ? "cursor-pointer" : "",
-        isActive ? "ring-2 ring-[#E8472A]/40" : "",
+        "group rounded-2xl border bg-white p-3 shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-neutral-300 hover:shadow-md",
+        isActive ? "border-[#E8472A] ring-4 ring-[#E8472A]/10" : "border-neutral-200",
       ].join(" ")}
+      onMouseEnter={() => {
+        if (hasCoords) setActiveActivityId(activity.id);
+      }}
+      onFocus={() => {
+        if (hasCoords) setActiveActivityId(activity.id);
+      }}
     >
-      <div className="flex items-start gap-3 min-w-0 w-full">
-        <TeardropPin number={index + 1} color={pinColor ?? "#00E5FF"} />
-        <div className="min-w-0">
-          {isEditing ? (
-            <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
-              <label className="block text-xs font-semibold text-neutral-600" htmlFor={`activity-name-${activity.id}`}>
-                Activity name
-              </label>
-              <input
-                id={`activity-name-${activity.id}`}
-                value={draftName}
-                onChange={(e) => setDraftName(e.target.value)}
-                className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-[#E8472A] focus:ring-2 focus:ring-[#E8472A]/20"
-              />
-              <label className="block text-xs font-semibold text-neutral-600" htmlFor={`activity-description-${activity.id}`}>
-                Notes
-              </label>
-              <textarea
-                id={`activity-description-${activity.id}`}
-                value={draftDescription}
-                onChange={(e) => setDraftDescription(e.target.value)}
-                rows={3}
-                className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-[#E8472A] focus:ring-2 focus:ring-[#E8472A]/20"
-              />
-              <div className="grid gap-2 sm:grid-cols-3">
-                <label className="block text-xs font-semibold text-neutral-600" htmlFor={`activity-time-${activity.id}`}>
-                  Time
-                  <input
-                    id={`activity-time-${activity.id}`}
-                    value={draftTime}
-                    onChange={(e) => setDraftTime(e.target.value)}
-                    placeholder="10:00 AM"
-                    className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-normal text-neutral-900 outline-none focus:border-[#E8472A] focus:ring-2 focus:ring-[#E8472A]/20"
-                  />
-                </label>
-                <label className="block text-xs font-semibold text-neutral-600" htmlFor={`activity-location-${activity.id}`}>
-                  Location
-                  <input
-                    id={`activity-location-${activity.id}`}
-                    value={draftLocation}
-                    onChange={(e) => setDraftLocation(e.target.value)}
-                    placeholder="Place or address"
-                    className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-normal text-neutral-900 outline-none focus:border-[#E8472A] focus:ring-2 focus:ring-[#E8472A]/20"
-                  />
-                </label>
-                <label className="block text-xs font-semibold text-neutral-600" htmlFor={`activity-cost-${activity.id}`}>
-                  Cost
-                  <input
-                    id={`activity-cost-${activity.id}`}
-                    value={draftCost}
-                    onChange={(e) => setDraftCost(e.target.value)}
-                    inputMode="numeric"
-                    placeholder="45"
-                    className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-normal text-neutral-900 outline-none focus:border-[#E8472A] focus:ring-2 focus:ring-[#E8472A]/20"
-                  />
-                </label>
-              </div>
-              <label className="block text-xs font-semibold text-neutral-600" htmlFor={`activity-private-notes-${activity.id}`}>
-                Private notes
-                <input
-                  id={`activity-private-notes-${activity.id}`}
-                  value={draftNotes}
-                  onChange={(e) => setDraftNotes(e.target.value)}
-                  placeholder="Booking reference, dietary needs, accessibility..."
-                  className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-normal text-neutral-900 outline-none focus:border-[#E8472A] focus:ring-2 focus:ring-[#E8472A]/20"
-                />
-              </label>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={saveEdit}
-                  className="rounded-full bg-[#E8472A] px-3 py-1 text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-[#E8472A]/30"
-                >
-                  Save locally
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDraftName(activity.name);
-                    setDraftDescription(activity.description);
-                    setIsEditing(false);
-                  }}
-                  className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-semibold text-neutral-700 focus:outline-none focus:ring-2 focus:ring-[#E8472A]/20"
-                >
-                  Cancel
-                </button>
-              </div>
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            setExpanded((value) => !value);
+            if (hasCoords) setActiveActivityId(isActive ? null : activity.id);
+          }}
+          className="flex min-w-0 flex-1 gap-3 text-left focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15"
+          aria-expanded={expanded}
+        >
+          <span
+            className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+            style={{ backgroundColor: pinColor ?? "#E8472A" }}
+          >
+            {index + 1}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-2">
+              <span className="truncate text-sm font-bold text-neutral-950 md:text-base">{activity.name}</span>
+              {activity.locked ? (
+                <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold text-neutral-600">
+                  Locked
+                </span>
+              ) : null}
+            </span>
+            <span className="mt-1 line-clamp-2 block text-xs leading-5 text-neutral-600 md:text-sm">
+              {oneLine}
+            </span>
+            <span className="mt-2 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+              {activity.durationMinutes ? <span>{activity.durationMinutes} min</span> : null}
+              {area ? <span className="truncate">{area}</span> : <span>Location needs check</span>}
+              <VerificationChip activity={activity} />
+              {activity.estimatedCost != null ? (
+                <span>${Math.round(activity.estimatedCost)} est.</span>
+              ) : null}
+            </span>
+          </span>
+        </button>
+
+        <div className="flex flex-shrink-0 flex-col items-end gap-2">
+          <ActivityThumbnail name={activity.name} photoUrl={photoUrl} />
+          <a
+            href={mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-full bg-[#F5EAE6] px-3 py-1.5 text-xs font-bold text-[#E8472A] transition-colors hover:bg-[#E8472A] hover:text-white focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15"
+            onClick={(event) => event.stopPropagation()}
+          >
+            Directions
+          </a>
+        </div>
+      </div>
+
+      {expanded ? (
+        <div className="mt-3 border-t border-neutral-100 pt-3">
+          <div className="grid gap-3 text-xs text-neutral-600 sm:grid-cols-2">
+            <div>
+              <div className="font-semibold text-neutral-900">Details</div>
+              <p className="mt-1 leading-5">{activity.description}</p>
+              {activity.address ? <p className="mt-2 text-neutral-500">{activity.address}</p> : null}
             </div>
-          ) : (
-            <>
-              <div className="flex items-center gap-2">
-                <div className="text-base font-semibold text-neutral-900 truncate">{activity.name}</div>
-                {activity.locked ? (
-                  <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold text-neutral-600">
-                    Locked
-                  </span>
-                ) : null}
-              </div>
-              <div className={["mt-2 text-sm leading-relaxed text-neutral-600", expanded ? "" : "line-clamp-3"].join(" ")}>
-                <span className="italic">From the web:</span>{" "}
-                {activity.description ?? "No description available yet."}
-              </div>
-              <TrustRow activity={activity} />
-            </>
-          )}
-          {expanded && activity.address && (
-            <div className="mt-2 text-xs text-neutral-500">{activity.address}</div>
-          )}
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-semibold text-[#E8472A]" onClick={(e) => e.stopPropagation()}>
-            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-              Open in Google Maps
-            </a>
+            <div>
+              <div className="font-semibold text-neutral-900">Trust</div>
+              <p className="mt-1 leading-5">
+                {trustDetails(activity)}
+              </p>
+              {activity.sourceUrl ? (
+                <a
+                  href={activity.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-flex font-semibold text-[#E8472A] underline"
+                >
+                  View source
+                </a>
+              ) : null}
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => setIsEditing(true)}
-              disabled={activity.locked}
-              className="underline disabled:text-neutral-400 disabled:no-underline"
+              onClick={() => toggleActivityLock(activity.id)}
+              className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:border-[#E8472A] hover:text-[#E8472A]"
             >
-              Edit
-            </button>
-            <button type="button" onClick={() => toggleActivityLock(activity.id)} className="underline">
               {activity.locked ? "Unlock" : "Lock"}
+            </button>
+            <button
+              type="button"
+              onClick={() => saveActivity(activity)}
+              disabled={isSaved}
+              className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:border-[#E8472A] hover:text-[#E8472A] disabled:opacity-50"
+            >
+              {isSaved ? "Saved" : "Save place"}
             </button>
             <button
               type="button"
               onClick={() => removeActivity(activity.id)}
               disabled={activity.locked}
-              className="underline disabled:text-neutral-400 disabled:no-underline"
+              className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:border-red-300 hover:text-red-600 disabled:opacity-50"
             >
               Delete
             </button>
-            <button
-              type="button"
-              onClick={() => saveActivity(activity)}
-              className="underline disabled:text-neutral-400 disabled:no-underline"
-              disabled={isSaved}
-            >
-              {isSaved ? "Saved" : "Save locally"}
-            </button>
           </div>
+          <p className="mt-3 text-[11px] leading-4 text-neutral-400">
+            Verify hours, prices, transit, and booking details before travel.
+          </p>
         </div>
-      </div>
+      ) : null}
+    </article>
+  );
+}
 
-      <div className="relative h-40 w-full flex-shrink-0 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100 sm:h-[120px] sm:w-[160px]">
-        {photoLoading && <div className="absolute inset-0 animate-pulse bg-neutral-200" />}
-        {photoUrl ? (
-          <Image
-            src={photoUrl}
-            alt={activity.name}
-            fill
-            className="object-cover"
-            unoptimized
-            onLoadingComplete={() => setPhotoLoading(false)}
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-[10px] text-neutral-500">
-            Photo unavailable
-          </div>
-        )}
-      </div>
+function ActivityThumbnail({ name, photoUrl }: { name: string; photoUrl: string | null }) {
+  return (
+    <div className="relative h-[72px] w-[72px] overflow-hidden rounded-xl bg-neutral-100 md:h-[76px] md:w-24">
+      {photoUrl ? (
+        <Image src={photoUrl} alt={name} fill className="object-cover" unoptimized />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-100 via-rose-100 to-sky-100 px-2 text-center text-[10px] font-semibold text-neutral-500">
+          {name.split(" ").slice(0, 2).join(" ")}
+        </div>
+      )}
     </div>
   );
 }
 
-function TrustRow({ activity }: { activity: Activity }) {
+function VerificationChip({ activity }: { activity: Activity }) {
   const status = activity.verificationStatus ?? "ai_suggestion";
   const label =
     status === "verified"
-      ? "Verified"
+      ? "Likely accurate"
       : status === "needs_verification"
         ? "Needs verification"
         : "AI suggestion";
-  const confidence =
-    typeof activity.confidence === "number" ? `${Math.round(activity.confidence * 100)}% confidence` : "Verify details";
-
-  return (
-    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
-      <span className="rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 font-semibold">
-        {label}
-      </span>
-      <span>{confidence}</span>
-      {activity.lastCheckedAt ? <span>Checked {activity.lastCheckedAt}</span> : null}
-      {activity.sourceUrl ? (
-        <a
-          href={activity.sourceUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-semibold text-[#E8472A] underline"
-          onClick={(e) => e.stopPropagation()}
-        >
-          Open source
-        </a>
-      ) : null}
-      <span className="basis-full text-[10px] text-neutral-400">
-        Verify hours, prices, transit, and booking details before travel.
-      </span>
-    </div>
-  );
+  const className =
+    status === "needs_verification"
+      ? "bg-amber-50 text-amber-700"
+      : status === "verified"
+        ? "bg-emerald-50 text-emerald-700"
+        : "bg-neutral-100 text-neutral-600";
+  return <span className={`rounded-full px-2 py-0.5 font-semibold ${className}`}>{label}</span>;
 }
 
-function TeardropPin({ number, color }: { number: number; color: string }) {
-  return (
-    <div className="relative h-10 w-8 flex-shrink-0">
-      <svg viewBox="0 0 64 90" className="h-10 w-8">
-        <path
-          d="M32 0C18 0 6.5 11.5 6.5 25.5c0 17.6 19.2 36.9 23.6 50.2.5 1.5 2.8 1.5 3.3 0 4.5-13.3 23.6-32.6 23.6-50.2C57.1 11.5 45.6 0 32 0z"
-          fill={color}
-        />
-        <circle cx="32" cy="27" r="16" fill="#0B1220" opacity="0.25" />
-      </svg>
-      <div className="absolute inset-0 flex items-start justify-center pt-[9px] text-xs font-semibold text-white">
-        {number}
-      </div>
-    </div>
-  );
+function trustDetails(activity: Activity) {
+  if (activity.verificationStatus === "verified") {
+    return "Likely accurate, but Wayfarer still recommends checking hours and booking details before travel.";
+  }
+  if (activity.verificationStatus === "needs_verification") {
+    return "Needs verification. Check hours, ticket availability, and transit before relying on this stop.";
+  }
+  return "AI suggestion. Treat this as a planning idea until you confirm details from an official source.";
 }

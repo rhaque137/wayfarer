@@ -9,13 +9,13 @@ import { useTripStore } from "@/store/tripStore";
 import type { BudgetItem } from "@/lib/trip-schema";
 
 export default function TripChatPage() {
-  const [chatCollapsed, setChatCollapsed] = useState(false);
+  const [chatCollapsed, setChatCollapsed] = useState(true);
   const [mapCollapsed, setMapCollapsed] = useState(false);
   const [itineraryCollapsed, setItineraryCollapsed] = useState(false);
   const [chatWidth, setChatWidth] = useState(400);
   const [itineraryWidth, setItineraryWidth] = useState(360);
   const [dragging, setDragging] = useState<null | "left" | "right">(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "itinerary" | "map" | "budget" | "notes" | "share" | "chat">("overview");
+  const [activeTab, setActiveTab] = useState<"itinerary" | "map" | "explore" | "budget" | "notes" | "share" | "chat">("itinerary");
   const [workspaceNotice, setWorkspaceNotice] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -119,24 +119,44 @@ export default function TripChatPage() {
 
   return (
     <div ref={containerRef} className="flex h-dvh flex-col overflow-hidden bg-[#F5F0EB]">
-      <header className="z-30 border-b border-neutral-200 bg-[#FAF7F3]/95 px-4 py-3 shadow-sm backdrop-blur">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 text-xs text-neutral-500">
-              <Link href="/" className="font-semibold text-[#E8472A] hover:underline">Wayfarer</Link>
-              <span>/</span>
-              <Link href="/trips" className="hover:text-neutral-900">Trips</Link>
-            </div>
-            <h1 className="mt-1 truncate text-xl font-bold text-neutral-900">
-              {trip?.title ?? trip?.name ?? "Trip workspace"}
-            </h1>
-            <div className="mt-1 text-sm text-neutral-600">
-              {trip?.destination ?? "Describe your trip to generate a day-by-day itinerary"}
-              {trip?.tripLengthDays ? ` · ${trip.tripLengthDays} days` : null}
+      <header className="z-30 border-b border-neutral-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <Link
+              href="/trips"
+              aria-label="Back to trips"
+              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-lg font-semibold text-neutral-700 transition-colors hover:border-[#E8472A] hover:text-[#E8472A] focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15"
+            >
+              ‹
+            </Link>
+            <div className="min-w-0">
+              <div className="hidden items-center gap-2 text-xs text-neutral-500 md:flex">
+                <Link href="/" className="font-semibold text-[#E8472A] hover:underline">Wayfarer</Link>
+                <span>/</span>
+                <Link href="/trips" className="hover:text-neutral-900">Trips</Link>
+              </div>
+              <h1 className="truncate text-lg font-bold text-neutral-900 md:mt-1 md:text-xl">
+                {trip?.destination ?? trip?.title ?? trip?.name ?? "Trip workspace"}
+              </h1>
+              <div className="truncate text-xs text-neutral-600 md:mt-1 md:text-sm">
+              {trip?.tripLengthDays ? `${trip.tripLengthDays} days` : "Describe your trip to generate an itinerary"}
               {trip?.travelers ?? trip?.numPeople ? ` · ${trip.travelers ?? trip.numPeople} travelers` : null}
+              </div>
             </div>
           </div>
           <div className="hidden flex-wrap items-center gap-2 md:flex">
+            <button
+              type="button"
+              onClick={() => setChatCollapsed((v) => !v)}
+              className={[
+                "rounded-full border px-4 py-2 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-[#E8472A]/25",
+                !chatCollapsed
+                  ? "border-[#E8472A] bg-[#F5EAE6] text-[#E8472A]"
+                  : "border-neutral-200 bg-white text-neutral-700 hover:border-[#E8472A] hover:text-[#E8472A]",
+              ].join(" ")}
+            >
+              AI
+            </button>
             <button
               type="button"
               onClick={saveTrip}
@@ -161,15 +181,34 @@ export default function TripChatPage() {
               Export / Print
             </button>
           </div>
+          <details className="relative md:hidden">
+            <summary
+              aria-label="Open trip actions"
+              className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full border border-neutral-200 bg-white text-lg font-bold text-neutral-700 shadow-sm focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15 [&::-webkit-details-marker]:hidden"
+            >
+              ⋯
+            </summary>
+            <div className="absolute right-0 top-12 z-50 w-44 rounded-2xl border border-neutral-200 bg-white p-2 text-sm shadow-xl">
+              <button type="button" onClick={saveTrip} disabled={!trip} className="block w-full rounded-xl px-3 py-2 text-left font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-50">
+                Save
+              </button>
+              <button type="button" onClick={() => void shareTrip()} disabled={!trip} className="block w-full rounded-xl px-3 py-2 text-left font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-50">
+                Share
+              </button>
+              <button type="button" onClick={() => window.print()} className="block w-full rounded-xl px-3 py-2 text-left font-semibold text-neutral-700 hover:bg-neutral-50">
+                Export / Print
+              </button>
+            </div>
+          </details>
         </div>
         <div className="mt-3 hidden gap-2 overflow-x-auto pb-1 md:flex">
           {[
             ["itinerary", "Itinerary"],
             ["map", "Map"],
+            ["explore", "Explore"],
             ["budget", "Budget"],
             ["notes", "Notes"],
             ["share", "Share"],
-            ["chat", "AI assistant"],
           ].map(([id, label]) => (
             <button
               key={id}
@@ -192,7 +231,7 @@ export default function TripChatPage() {
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
-      {(!isMobile || activeTab === "overview" || activeTab === "itinerary") && activeTab !== "budget" && activeTab !== "notes" && activeTab !== "share" && (
+      {(!isMobile || activeTab === "itinerary") && activeTab !== "budget" && activeTab !== "notes" && activeTab !== "share" && activeTab !== "explore" && (
         <div
           className={[
             "border-r border-neutral-200 bg-[#FAF7F3] transition-all duration-300 ease-in-out",
@@ -215,7 +254,7 @@ export default function TripChatPage() {
         />
       )}
 
-      {(!isMobile || ["map", "budget", "notes", "share"].includes(activeTab)) && (
+      {(!isMobile || ["map", "budget", "notes", "share", "explore"].includes(activeTab)) && (
         <div
           className={[
             "border-r border-neutral-200 bg-white transition-all duration-300 ease-in-out",
@@ -225,6 +264,8 @@ export default function TripChatPage() {
         >
           {activeTab === "budget" ? (
             <BudgetWorkspacePanel />
+          ) : activeTab === "explore" ? (
+            <ExploreWorkspacePanel />
           ) : activeTab === "notes" ? (
             <NotesWorkspacePanel />
           ) : activeTab === "share" ? (
@@ -241,19 +282,19 @@ export default function TripChatPage() {
         </div>
       )}
 
-      {!isMobile && (
+      {!isMobile && !chatCollapsed && (
         <div
           onMouseDown={() => setDragging("right")}
           className="w-2 cursor-col-resize bg-transparent hover:bg-white/60"
         />
       )}
 
-      {(!isMobile || activeTab === "chat") && (
+      {((!isMobile && !chatCollapsed) || (isMobile && activeTab === "chat")) && (
         <div
           className={[
             "transition-all duration-300 ease-in-out",
             "bg-[#FAF7F3]",
-            chatCollapsed ? "w-12 overflow-hidden" : "",
+            chatCollapsed && !isMobile ? "hidden" : "",
             isMobile ? "w-full flex-1 min-h-0 pb-24" : "",
           ].join(" ")}
           style={!chatCollapsed && !isMobile ? { width: chatWidth } : undefined}
@@ -269,18 +310,18 @@ export default function TripChatPage() {
         <div className="fixed bottom-0 left-1/2 z-40 w-[min(520px,calc(100%-24px))] -translate-x-1/2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:hidden">
           <div className="flex items-center justify-between rounded-2xl border border-neutral-200 bg-white/95 p-2 shadow-sm backdrop-blur">
             {[
-              { id: "overview", label: "Overview", icon: "▦" },
               { id: "itinerary", label: "Itinerary", icon: "🗓" },
               { id: "map", label: "Map", icon: "⌖" },
+              { id: "explore", label: "Explore", icon: "＋" },
               { id: "budget", label: "Budget", icon: "$" },
-              { id: "chat", label: "AI Chat", icon: "✦" },
+              { id: "chat", label: "AI", icon: "✦" },
             ].map((t) => (
               <button
                 key={t.id}
                 onClick={() => setActiveTab(t.id as typeof activeTab)}
                 aria-label={`Open ${t.label} panel`}
                 className={[
-                  "flex flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[10px] font-semibold transition-all duration-200",
+                  "flex flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[10px] font-semibold transition-colors duration-200",
                   activeTab === t.id
                     ? "bg-[#F5EAE6] text-[#E8472A]"
                     : "text-neutral-500",
@@ -339,6 +380,46 @@ function BudgetWorkspacePanel() {
             />
           </label>
         ))}
+      </div>
+    </section>
+  );
+}
+
+function ExploreWorkspacePanel() {
+  const trip = useTripStore((s) => s.trip);
+  const actions = [
+    "Add sushi nearby",
+    "Find rainy-day alternatives",
+    "Add a museum",
+    "Make this day lighter",
+    "Optimize route times",
+    "Lower budget by 20%",
+  ];
+
+  return (
+    <section className="h-full overflow-y-auto bg-[#FAF7F3] p-5 pb-28 md:pb-5">
+      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#E8472A]">Explore</div>
+      <h2 className="mt-2 text-2xl font-bold text-neutral-900">Improve this trip</h2>
+      <p className="mt-2 text-sm leading-6 text-neutral-600">
+        Use these as quick planning prompts. AI suggestions should be reviewed before booking.
+      </p>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        {actions.map((action) => (
+          <button
+            key={action}
+            type="button"
+            className="rounded-2xl border border-neutral-200 bg-white p-4 text-left text-sm font-semibold text-neutral-800 shadow-sm transition-[border-color,box-shadow] hover:border-[#E8472A]/40 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15"
+          >
+            {action}
+          </button>
+        ))}
+      </div>
+      <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-4">
+        <div className="text-sm font-bold text-neutral-900">Current focus</div>
+        <p className="mt-1 text-sm text-neutral-600">
+          {trip?.destination ?? "Your trip"} · {trip?.days.length ?? 0} days ·{" "}
+          {trip?.days.reduce((sum, day) => sum + day.activities.length, 0) ?? 0} places
+        </p>
       </div>
     </section>
   );
