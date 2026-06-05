@@ -1,7 +1,6 @@
 "use client";
 
 import { Reveal } from "@/components/home/Reveal";
-import { Tilt3D } from "@/components/ui/3d-card";
 
 const testimonials = [
   {
@@ -25,16 +24,35 @@ export function Testimonials() {
   return (
     <section className="mx-auto w-full max-w-6xl px-6 py-16">
       <Reveal>
-        <div className="mt-4 flex gap-4 overflow-x-auto pb-2">
+        <div>
+          <div className="text-2xl font-semibold text-neutral-900">What travelers are saying</div>
+          <div className="mt-2 text-sm text-neutral-500">Real planning moments from early Wayfarer users.</div>
+        </div>
+      </Reveal>
+
+      <Reveal delay={120}>
+        <div
+          aria-label="Traveler reviews"
+          className="-mx-6 mt-8 flex snap-x gap-4 overflow-x-auto px-6 pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
           {testimonials.map((t) => (
-            <Tilt3D key={t.name} className="min-w-[260px]">
-              <div className="rounded-2xl bg-[#1A1A1A] p-6 text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-                <div className="text-4xl leading-none text-white/30">❝</div>
-                <div className="mt-2 text-sm italic text-white/80">{t.quote}</div>
-                <div className="mt-4 text-sm font-semibold">{t.name}</div>
-                <div className="text-xs text-white/60">{t.title}</div>
+            <article
+              key={t.name}
+              className="flex min-h-[220px] flex-[0_0_82%] snap-start flex-col justify-between rounded-2xl bg-[#1A1A1A] p-6 text-white shadow-sm transition-shadow duration-200 hover:shadow-md sm:flex-[0_0_45%] lg:flex-[0_0_31%]"
+            >
+              <div>
+                <div aria-hidden="true" className="text-4xl leading-none text-white/30">
+                  ❝
+                </div>
+                <blockquote className="mt-3 text-sm italic leading-6 text-white/80">
+                  {t.quote}
+                </blockquote>
               </div>
-            </Tilt3D>
+              <footer className="mt-6">
+                <div className="text-sm font-semibold">{t.name}</div>
+                <div className="text-xs text-white/60">{t.title}</div>
+              </footer>
+            </article>
           ))}
         </div>
       </Reveal>
