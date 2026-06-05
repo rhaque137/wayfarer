@@ -73,7 +73,10 @@ export function TravelGuides() {
 
       <Reveal delay={120}>
         {createTripError ? <div className="mt-6 text-sm font-semibold text-[#E8472A]">{createTripError}</div> : null}
-        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          aria-label="Curated destination guides"
+          className="-mx-6 mt-8 flex snap-x gap-4 overflow-x-auto px-6 pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
           {filteredGuides.map((guide) => {
             const destinationImage = getDestinationImage(guide.city);
             const imageKey = guide.city.toLowerCase();
@@ -88,7 +91,7 @@ export function TravelGuides() {
                 aria-label={`Open ${guide.city} ${guide.label} guide`}
                 onClick={() => void createTrip(guide.city, guide.prompt)}
                 disabled={creatingGuide !== null}
-                className="group h-full w-full overflow-hidden rounded-2xl border border-neutral-200 bg-white text-left shadow-sm transition-[border-color,box-shadow,background-color] duration-200 ease-out hover:border-neutral-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15 disabled:cursor-not-allowed disabled:opacity-70"
+                className="group h-full flex-[0_0_84%] snap-start overflow-hidden rounded-2xl border border-neutral-200 bg-white text-left shadow-sm transition-[border-color,box-shadow,background-color] duration-200 ease-out hover:border-neutral-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15 disabled:cursor-not-allowed disabled:opacity-70 sm:flex-[0_0_45%] lg:flex-[0_0_31%]"
               >
                 <div className="grid aspect-[16/9] w-full overflow-hidden bg-neutral-100">
                   {showImage ? (

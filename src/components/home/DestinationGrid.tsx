@@ -121,7 +121,7 @@ export function DestinationGrid() {
       </Reveal>
 
       <Reveal delay={120}>
-        <div className="mt-6 flex flex-wrap gap-2">
+        <div className="-mx-6 mt-6 flex gap-2 overflow-x-auto px-6 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {chips.map((chip) => (
             <button
               key={chip.key}
@@ -129,7 +129,7 @@ export function DestinationGrid() {
                 setSelectedCategory((prev) => (prev === chip.key ? null : chip.key))
               }
               className={cn(
-                "rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm transition-colors duration-200",
+                "shrink-0 rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm transition-colors duration-200",
                 "cursor-pointer",
                 selectedCategory === chip.key
                   ? "border-[#E8472A] bg-[#E8472A] text-white"
@@ -143,7 +143,10 @@ export function DestinationGrid() {
         </div>
         {createTripError ? <div className="mt-4 text-sm font-semibold text-[#E8472A]">{createTripError}</div> : null}
 
-        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div
+          aria-label="Explore destinations"
+          className="-mx-6 mt-8 flex snap-x gap-4 overflow-x-auto px-6 pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
           {filtered.map((dest) => {
             const destinationImage = getDestinationImage(dest.photoQuery);
             const showImage =
@@ -157,7 +160,7 @@ export function DestinationGrid() {
                 aria-label={`Explore ${dest.name} – ${dest.price ?? "$1,200/wk"}`}
                 onClick={() => void createTrip(dest.name)}
                 disabled={creatingDestination !== null}
-                className="group h-full w-full overflow-hidden rounded-2xl border border-neutral-200 bg-white text-left shadow-sm transition-[border-color,box-shadow,background-color] duration-200 ease-out hover:border-neutral-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15 disabled:cursor-not-allowed disabled:opacity-70"
+                className="group h-full flex-[0_0_82%] snap-start overflow-hidden rounded-2xl border border-neutral-200 bg-white text-left shadow-sm transition-[border-color,box-shadow,background-color] duration-200 ease-out hover:border-neutral-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15 disabled:cursor-not-allowed disabled:opacity-70 sm:flex-[0_0_45%] lg:flex-[0_0_23%]"
               >
                 <div className="grid aspect-[16/9] w-full overflow-hidden bg-neutral-100">
                   {showImage ? (
@@ -202,7 +205,7 @@ export function DestinationGrid() {
             );
           })}
           {filtered.length === 0 && (
-            <div className="col-span-full rounded-2xl border border-neutral-200 bg-white p-6 text-center text-sm text-neutral-600">
+            <div className="min-w-full rounded-2xl border border-neutral-200 bg-white p-6 text-center text-sm text-neutral-600">
               No destinations found for this category. Try another filter.
               <button
                 onClick={() => setSelectedCategory(null)}

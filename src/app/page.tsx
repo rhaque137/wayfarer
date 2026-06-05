@@ -8,6 +8,7 @@ import { FooterCTA } from "@/components/home/FooterCTA";
 import { HelpWidget } from "@/components/home/HelpWidget";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { PLACEHOLDER_IMAGE, getDestinationImage } from "@/lib/destination-images";
+import { useAuth } from "@/lib/auth/context";
 import { CREATE_TRIP_ERROR_MESSAGE, MAX_TRIP_PROMPT_LENGTH } from "@/lib/trip-limits";
 
 const AuthBar = dynamic(() => import("@/components/home/AuthBar").then((mod) => mod.AuthBar), {
@@ -55,6 +56,7 @@ const DEFAULT_INTAKE: TripIntake = {
 };
 
 export default function Home() {
+  const { user } = useAuth();
   const [intake, setIntake] = useState<TripIntake>(DEFAULT_INTAKE);
   const [recentTrips, setRecentTrips] = useState<RecentTrip[]>([]);
   const [recentImages, setRecentImages] = useState<Record<string, string>>({});
@@ -222,7 +224,7 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-3">
             <button
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 text-neutral-700 transition-all duration-200 hover:border-[#E8472A] hover:text-[#E8472A] md:hidden"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 text-neutral-700 transition-[border-color,color] duration-200 hover:border-[#E8472A] hover:text-[#E8472A] md:hidden"
               aria-label="Open navigation menu"
               type="button"
               onClick={() => setMobileMenuOpen((v) => !v)}
@@ -274,7 +276,9 @@ export default function Home() {
         />
       </div>
 
-      <UpcomingTrips trips={upcomingTrips} onPlanNew={handlePlanNew} onSeeAll={() => router.push("/trips")} />
+      {user ? (
+        <UpcomingTrips trips={upcomingTrips} onPlanNew={handlePlanNew} onSeeAll={() => router.push("/trips")} />
+      ) : null}
       <ProductProof />
       <DestinationGrid />
       <HowItWorks />

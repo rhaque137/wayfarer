@@ -35,10 +35,11 @@ export function UserMenu() {
   if (!supabase) {
     return (
       <Link
-        href="/try"
-        className="rounded-full bg-neutral-950 px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-neutral-800"
+        href="/login"
+        title="Create a free account when authentication is configured. You can keep planning as a guest for now."
+        className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 shadow-sm transition-colors hover:border-[#E8472A] hover:text-[#E8472A]"
       >
-        Try the app
+        Guest mode
       </Link>
     );
   }
