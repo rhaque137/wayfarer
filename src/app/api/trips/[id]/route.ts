@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerTrip } from "@/lib/server-trip-store";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
-import { normalizeTrip } from "@/lib/trip-schema";
+import { buildMockTrip, normalizeTrip } from "@/lib/trip-schema";
+import { promptFromTripId } from "@/lib/trip-route-id";
 
 export async function GET(_req: Request, context: { params: Promise<unknown> }) {
   const params = await context.params;
@@ -22,6 +23,11 @@ export async function GET(_req: Request, context: { params: Promise<unknown> }) 
       return NextResponse.json({ trip: { ...normalized, id } });
     }
     if (error) console.warn("trip_lookup_failed", error.message);
+  }
+
+  const prompt = promptFromTripId(id);
+  if (prompt) {
+    return NextResponse.json({ trip: buildMockTrip(prompt, id) });
   }
 
   return NextResponse.json({ error: "Trip not found" }, { status: 404 });
