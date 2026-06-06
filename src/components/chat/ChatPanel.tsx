@@ -3,6 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useParams } from "next/navigation";
 import { useTripStore } from "@/store/tripStore";
 import Link from "next/link";
 import { PanelHeader } from "@/components/ui/PanelHeader";
@@ -19,6 +20,8 @@ export function ChatPanel({
   onToggle?: () => void;
 }) {
   const { trip, setTrip, setPendingAIChanges, lastQuery, setLastQuery, messages: storedMessages, setMessages } = useTripStore();
+  const params = useParams<{ id?: string }>();
+  const routeTripId = params.id;
   const bottomRef = useRef<HTMLDivElement>(null);
   const sentRef = useRef(false);
 
@@ -122,16 +125,16 @@ export function ChatPanel({
       sentRef.current = true;
       window.history.replaceState({}, "", window.location.pathname);
       setLastQuery(initialQuery);
-      setTrip(buildMockTrip(initialQuery));
+      setTrip(buildMockTrip(initialQuery, routeTripId));
       sendMessage({ text: initialQuery });
       return;
     }
     if (!initialQuery && lastQuery && !sentRef.current && !trip) {
       sentRef.current = true;
-      setTrip(buildMockTrip(lastQuery));
+      setTrip(buildMockTrip(lastQuery, routeTripId));
       sendMessage({ text: lastQuery });
     }
-  }, [sendMessage, lastQuery, trip, setLastQuery]);
+  }, [sendMessage, lastQuery, trip, routeTripId, setLastQuery, setTrip]);
 
   const quickActions = [
     { label: "Build a day-by-day itinerary", prompt: "Build me a detailed day-by-day itinerary with timings and tips" },

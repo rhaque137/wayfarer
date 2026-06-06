@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { MapPanel } from "@/components/map/MapPanel";
 import { ItineraryPanel } from "@/components/itinerary/ItineraryPanel";
 import { useTripStore } from "@/store/tripStore";
-import type { BudgetItem } from "@/lib/trip-schema";
+import { buildMockTrip, parseDestinationFromPrompt } from "@/lib/trip-schema";
+import type { BudgetItem, Trip } from "@/lib/trip-schema";
 
 export default function TripChatPage() {
   const [chatCollapsed, setChatCollapsed] = useState(true);
@@ -19,9 +21,17 @@ export default function TripChatPage() {
   const [workspaceNotice, setWorkspaceNotice] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const params = useParams<{ id: string; chatId: string }>();
+  const searchParams = useSearchParams();
+  const routeTripId = params.id;
+  const queryPrompt = searchParams.get("q");
+  const from = searchParams.get("from");
   const trip = useTripStore((s) => s.trip);
   const lastQuery = useTripStore((s) => s.lastQuery);
   const updateTrip = useTripStore((s) => s.updateTrip);
+  const setTrip = useTripStore((s) => s.setTrip);
+  const setLastQuery = useTripStore((s) => s.setLastQuery);
 
   const canCollapseMap = !(chatCollapsed && itineraryCollapsed);
 
@@ -88,6 +98,89 @@ export default function TripChatPage() {
     }
   }, [trip, lastQuery]);
 
+  useEffect(() => {
+    if (!routeTripId) return;
+    if (trip?.id === routeTripId) return;
+    try {
+      const savedRaw = localStorage.getItem("wayfarer_saved_trips");
+      const saved = savedRaw ? JSON.parse(savedRaw) : [];
+      const found = Array.isArray(saved)
+        ? saved.find((item) => item?.id === routeTripId && Array.isArray(item?.days))
+        : null;
+      if (found) {
+        setTrip(found as Trip);
+      } else {
+        console.warn("trip_route_cache_miss", {
+          routeTripId,
+          loadedTripId: trip?.id,
+          hasQueryPrompt: Boolean(queryPrompt),
+        });
+      }
+    } catch {
+      console.warn("trip_route_cache_read_failed", {
+        routeTripId,
+        loadedTripId: trip?.id,
+        hasQueryPrompt: Boolean(queryPrompt),
+      });
+    }
+  }, [routeTripId, trip?.id, queryPrompt, setTrip]);
+
+  const requestedDestination = queryPrompt ? parseDestinationFromPrompt(queryPrompt) : null;
+  const routeMismatch = Boolean(trip && routeTripId && trip.id !== routeTripId);
+  const destinationConflict = Boolean(
+    trip &&
+      !routeMismatch &&
+      requestedDestination &&
+      !destinationMatches(trip.destination, requestedDestination),
+  );
+  const shouldBlockWorkspace = routeMismatch || destinationConflict || !trip;
+
+  useEffect(() => {
+    if (!shouldBlockWorkspace) return;
+    console.warn("trip_route_blocked", {
+      routeTripId,
+      loadedTripId: trip?.id,
+      loadedDestination: trip?.destination,
+      requestedDestination,
+      hasQueryPrompt: Boolean(queryPrompt),
+      reason: routeMismatch ? "route_mismatch" : destinationConflict ? "destination_mismatch" : "missing_trip",
+    });
+  }, [
+    shouldBlockWorkspace,
+    routeTripId,
+    trip?.id,
+    trip?.destination,
+    requestedDestination,
+    queryPrompt,
+    routeMismatch,
+    destinationConflict,
+  ]);
+
+  const generateFromPrompt = () => {
+    if (!queryPrompt || !routeTripId) return;
+    const nextTrip = buildMockTrip(queryPrompt, routeTripId);
+    setLastQuery(queryPrompt);
+    setTrip(nextTrip);
+    setWorkspaceNotice(`Generated a local ${nextTrip.destination} itinerary from this link.`);
+    window.history.replaceState({}, "", window.location.pathname);
+  };
+
+  const handleBack = () => {
+    if (from === "planner") {
+      router.push(`/try${queryPrompt ? `?q=${encodeURIComponent(queryPrompt)}` : ""}`);
+      return;
+    }
+    if (from === "trips") {
+      router.push("/trips");
+      return;
+    }
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push("/trips");
+  };
+
   const saveTrip = () => {
     if (!trip) return;
     try {
@@ -117,18 +210,38 @@ export default function TripChatPage() {
     setActiveTab("share");
   };
 
+  if (shouldBlockWorkspace) {
+    return (
+      <TripRecoveryState
+        routeTripId={routeTripId}
+        loadedTrip={trip}
+        queryPrompt={queryPrompt}
+        requestedDestination={requestedDestination}
+        routeMismatch={routeMismatch}
+        destinationConflict={destinationConflict}
+        onGenerate={generateFromPrompt}
+        onEditPrompt={() => router.push(`/try${queryPrompt ? `?q=${encodeURIComponent(queryPrompt)}` : ""}`)}
+        onTrips={() => router.push("/trips")}
+        onOpenLoaded={() => {
+          if (trip?.id) router.push(`/trip/${trip.id}/chat/main?from=trips`);
+        }}
+      />
+    );
+  }
+
   return (
     <div ref={containerRef} className="flex h-dvh flex-col overflow-hidden bg-[#F5F0EB]">
       <header className="z-30 border-b border-neutral-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <Link
-              href="/trips"
+            <button
+              type="button"
+              onClick={handleBack}
               aria-label="Back to trips"
               className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-lg font-semibold text-neutral-700 transition-colors hover:border-[#E8472A] hover:text-[#E8472A] focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15"
             >
               ‹
-            </Link>
+            </button>
             <div className="min-w-0">
               <div className="hidden items-center gap-2 text-xs text-neutral-500 md:flex">
                 <Link href="/" className="font-semibold text-[#E8472A] hover:underline">Wayfarer</Link>
@@ -161,6 +274,7 @@ export default function TripChatPage() {
               type="button"
               onClick={saveTrip}
               disabled={!trip}
+              title={!trip ? "Save disabled — generate an itinerary first." : undefined}
               className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-[#E8472A] hover:text-[#E8472A] focus:outline-none focus:ring-2 focus:ring-[#E8472A]/25 disabled:opacity-50"
             >
               Save
@@ -169,6 +283,7 @@ export default function TripChatPage() {
               type="button"
               onClick={() => void shareTrip()}
               disabled={!trip}
+              title={!trip ? "Share disabled — no trip loaded." : undefined}
               className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-[#E8472A] hover:text-[#E8472A] focus:outline-none focus:ring-2 focus:ring-[#E8472A]/25 disabled:opacity-50"
             >
               Share
@@ -189,10 +304,10 @@ export default function TripChatPage() {
               ⋯
             </summary>
             <div className="absolute right-0 top-12 z-50 w-44 rounded-2xl border border-neutral-200 bg-white p-2 text-sm shadow-xl">
-              <button type="button" onClick={saveTrip} disabled={!trip} className="block w-full rounded-xl px-3 py-2 text-left font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-50">
+              <button type="button" onClick={saveTrip} disabled={!trip} title={!trip ? "Save disabled — generate an itinerary first." : undefined} className="block w-full rounded-xl px-3 py-2 text-left font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-50">
                 Save
               </button>
-              <button type="button" onClick={() => void shareTrip()} disabled={!trip} className="block w-full rounded-xl px-3 py-2 text-left font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-50">
+              <button type="button" onClick={() => void shareTrip()} disabled={!trip} title={!trip ? "Share disabled — no trip loaded." : undefined} className="block w-full rounded-xl px-3 py-2 text-left font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-50">
                 Share
               </button>
               <button type="button" onClick={() => window.print()} className="block w-full rounded-xl px-3 py-2 text-left font-semibold text-neutral-700 hover:bg-neutral-50">
@@ -337,6 +452,119 @@ export default function TripChatPage() {
       </div>
     </div>
   );
+}
+
+function TripRecoveryState({
+  routeTripId,
+  loadedTrip,
+  queryPrompt,
+  requestedDestination,
+  routeMismatch,
+  destinationConflict,
+  onGenerate,
+  onEditPrompt,
+  onTrips,
+  onOpenLoaded,
+}: {
+  routeTripId: string;
+  loadedTrip: Trip | null;
+  queryPrompt: string | null;
+  requestedDestination: string | null;
+  routeMismatch: boolean;
+  destinationConflict: boolean;
+  onGenerate: () => void;
+  onEditPrompt: () => void;
+  onTrips: () => void;
+  onOpenLoaded: () => void;
+}) {
+  const loadedDestination = loadedTrip?.destination;
+  const title =
+    routeMismatch && loadedTrip
+      ? "This itinerary link does not match your cached trip."
+      : destinationConflict
+        ? `This link is for ${requestedDestination}, but cached data is ${loadedDestination}.`
+        : "We couldn’t load this itinerary.";
+
+  return (
+    <main className="flex min-h-dvh items-center justify-center bg-[#F5F0EB] px-4 py-10">
+      <section className="w-full max-w-xl rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-8">
+        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#E8472A]">Trip recovery</div>
+        <h1 className="mt-3 text-2xl font-bold tracking-tight text-neutral-950">{title}</h1>
+        <p className="mt-3 text-sm leading-6 text-neutral-600">
+          The trip may still be generating, saved only on another device, unavailable, or blocked because the route data
+          does not match the itinerary currently cached in this browser.
+        </p>
+
+        <div className="mt-5 rounded-2xl bg-neutral-50 p-4 text-sm text-neutral-700">
+          <div><span className="font-semibold">Route trip ID:</span> {routeTripId}</div>
+          {loadedTrip ? <div><span className="font-semibold">Cached trip:</span> {loadedTrip.id} · {loadedTrip.destination}</div> : null}
+          {requestedDestination ? <div><span className="font-semibold">Prompt destination:</span> {requestedDestination}</div> : null}
+          {queryPrompt ? (
+            <div className="mt-3">
+              <div className="font-semibold">Prompt found</div>
+              <p className="mt-1 line-clamp-4 text-neutral-600">{queryPrompt}</p>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          {queryPrompt ? (
+            <button
+              type="button"
+              onClick={onGenerate}
+              className="rounded-full bg-[#E8472A] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-[#E8472A]/20 sm:col-span-2"
+            >
+              Generate this {requestedDestination ?? "trip"} itinerary
+            </button>
+          ) : null}
+          {loadedTrip ? (
+            <button
+              type="button"
+              onClick={onOpenLoaded}
+              className="rounded-full border border-neutral-200 bg-white px-5 py-3 text-sm font-semibold text-neutral-700 transition hover:border-[#E8472A] hover:text-[#E8472A] focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15"
+            >
+              Open cached {loadedTrip.destination} trip
+            </button>
+          ) : null}
+          {queryPrompt ? (
+            <button
+              type="button"
+              onClick={onEditPrompt}
+              className="rounded-full border border-neutral-200 bg-white px-5 py-3 text-sm font-semibold text-neutral-700 transition hover:border-[#E8472A] hover:text-[#E8472A] focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15"
+            >
+              Edit prompt
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={onTrips}
+            className="rounded-full border border-neutral-200 bg-white px-5 py-3 text-sm font-semibold text-neutral-700 transition hover:border-[#E8472A] hover:text-[#E8472A] focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15"
+          >
+            Go to trips
+          </button>
+          <Link
+            href="/try"
+            className="rounded-full border border-neutral-200 bg-white px-5 py-3 text-center text-sm font-semibold text-neutral-700 transition hover:border-[#E8472A] hover:text-[#E8472A] focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15"
+          >
+            Start a new trip
+          </Link>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function destinationMatches(loaded: string, requested: string) {
+  const normalize = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  const left = normalize(loaded);
+  const right = normalize(requested);
+  if (!left || !right) return true;
+  return left.includes(right) || right.includes(left);
 }
 
 function BudgetWorkspacePanel() {
