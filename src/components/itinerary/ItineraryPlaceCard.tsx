@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import { Activity, useTripStore } from "@/store/tripStore";
+import { getActivityPhotoUrl } from "@/lib/activity-media";
 
 type Props = {
   activity: Activity;
@@ -11,7 +12,7 @@ type Props = {
   pinColor?: string;
 };
 
-export function ItineraryPlaceCard({ activity, index, pinColor }: Props) {
+export function ItineraryPlaceCard({ activity, index, destination, pinColor }: Props) {
   const {
     activeActivityId,
     setActiveActivityId,
@@ -22,9 +23,10 @@ export function ItineraryPlaceCard({ activity, index, pinColor }: Props) {
   } = useTripStore();
   const [expanded, setExpanded] = useState(false);
   const isActive = activeActivityId === activity.id;
+  const isExpanded = expanded || isActive;
   const isSaved = savedActivities.some((saved) => saved.id === activity.id);
   const hasCoords = activity.lat != null && activity.lng != null;
-  const photoUrl = activity.photoUrl ?? activity.imageUrl ?? null;
+  const photoUrl = getActivityPhotoUrl(activity, destination);
 
   const mapsUrl = useMemo(() => {
     if (hasCoords) {
@@ -39,6 +41,7 @@ export function ItineraryPlaceCard({ activity, index, pinColor }: Props) {
 
   return (
     <article
+      id={`activity-${activity.id}`}
       className={[
         "group rounded-2xl border bg-white p-3 shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-neutral-300 hover:shadow-md",
         isActive ? "border-[#E8472A] ring-4 ring-[#E8472A]/10" : "border-neutral-200",
@@ -58,7 +61,7 @@ export function ItineraryPlaceCard({ activity, index, pinColor }: Props) {
             if (hasCoords) setActiveActivityId(isActive ? null : activity.id);
           }}
           className="flex min-w-0 flex-1 gap-3 text-left focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15"
-          aria-expanded={expanded}
+          aria-expanded={isExpanded}
         >
           <span
             className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
@@ -82,6 +85,11 @@ export function ItineraryPlaceCard({ activity, index, pinColor }: Props) {
               {activity.durationMinutes ? <span>{activity.durationMinutes} min</span> : null}
               {area ? <span className="truncate">{area}</span> : <span>Location needs check</span>}
               <VerificationChip activity={activity} />
+              {!hasCoords ? (
+                <span className="rounded-full bg-amber-50 px-2 py-0.5 font-semibold text-amber-700">
+                  Needs location
+                </span>
+              ) : null}
               {activity.estimatedCost != null ? (
                 <span>${Math.round(activity.estimatedCost)} est.</span>
               ) : null}
@@ -103,7 +111,7 @@ export function ItineraryPlaceCard({ activity, index, pinColor }: Props) {
         </div>
       </div>
 
-      {expanded ? (
+      {isExpanded ? (
         <div className="mt-3 border-t border-neutral-100 pt-3">
           <div className="grid gap-3 text-xs text-neutral-600 sm:grid-cols-2">
             <div>
@@ -163,10 +171,20 @@ export function ItineraryPlaceCard({ activity, index, pinColor }: Props) {
 }
 
 function ActivityThumbnail({ name, photoUrl }: { name: string; photoUrl: string | null }) {
+  const [failed, setFailed] = useState(false);
   return (
     <div className="relative h-[72px] w-[72px] overflow-hidden rounded-xl bg-neutral-100 md:h-[76px] md:w-24">
-      {photoUrl ? (
-        <Image src={photoUrl} alt={name} fill className="object-cover" unoptimized />
+      {photoUrl && !failed ? (
+        <Image
+          src={photoUrl}
+          alt={name}
+          fill
+          sizes="(max-width: 768px) 72px, 96px"
+          className="object-cover"
+          loading="lazy"
+          unoptimized
+          onError={() => setFailed(true)}
+        />
       ) : (
         <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-100 via-rose-100 to-sky-100 px-2 text-center text-[10px] font-semibold text-neutral-500">
           {name.split(" ").slice(0, 2).join(" ")}

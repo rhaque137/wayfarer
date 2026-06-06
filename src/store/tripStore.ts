@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Activity, Trip } from "@/lib/trip-schema";
+import { withActivityPhoto } from "@/lib/activity-media";
 
 export type { Activity, Day, Trip } from "@/lib/trip-schema";
 
@@ -48,7 +49,7 @@ export const useTripStore = create<TripStore>()(
       activeActivityId: null,
       lastQuery: null,
 
-      setTrip: (trip) => set({ trip }),
+      setTrip: (trip) => set({ trip: withTripActivityPhotos(trip) }),
       updateTrip: (partial) =>
         set((state) => (state.trip ? { trip: { ...state.trip, ...partial } } : state)),
       addMessage: (msg) =>
@@ -144,3 +145,13 @@ export const useTripStore = create<TripStore>()(
     },
   ),
 );
+
+function withTripActivityPhotos(trip: Trip): Trip {
+  return {
+    ...trip,
+    days: trip.days.map((day) => ({
+      ...day,
+      activities: day.activities.map((activity) => withActivityPhoto(activity, trip.destination)),
+    })),
+  };
+}

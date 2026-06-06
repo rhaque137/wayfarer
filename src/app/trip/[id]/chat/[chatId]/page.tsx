@@ -8,7 +8,8 @@ import { MapPanel } from "@/components/map/MapPanel";
 import { ItineraryPanel } from "@/components/itinerary/ItineraryPanel";
 import { useTripStore } from "@/store/tripStore";
 import { parseDestinationFromPrompt } from "@/lib/trip-schema";
-import type { BudgetItem, Trip } from "@/lib/trip-schema";
+import type { Activity, BudgetItem, Trip } from "@/lib/trip-schema";
+import { withActivityPhoto } from "@/lib/activity-media";
 import {
   completeLocalTripFromPrompt,
   createLocalTripShell,
@@ -712,7 +713,12 @@ function BudgetWorkspacePanel() {
 
 function ExploreWorkspacePanel() {
   const trip = useTripStore((s) => s.trip);
-  const actions = [
+  const setTrip = useTripStore((s) => s.setTrip);
+  const activeActivityId = useTripStore((s) => s.activeActivityId);
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [pendingPatch, setPendingPatch] = useState<PendingTripPatch | null>(null);
+  const [undoTrip, setUndoTrip] = useState<Trip | null>(null);
+  const actions: ExploreAction[] = [
     "Add sushi nearby",
     "Find rainy-day alternatives",
     "Add a museum",
@@ -720,6 +726,31 @@ function ExploreWorkspacePanel() {
     "Optimize route times",
     "Lower budget by 20%",
   ];
+
+  const createPatch = (action: ExploreAction) => {
+    if (!trip) return;
+    setLoadingAction(action);
+    window.setTimeout(() => {
+      const patch = buildExplorePatch(action, trip, activeActivityId);
+      setPendingPatch(patch);
+      setLoadingAction(null);
+    }, 350);
+  };
+
+  const applyPatch = () => {
+    if (!pendingPatch) return;
+    setUndoTrip(pendingPatch.previousTrip);
+    setTrip(pendingPatch.nextTrip);
+    saveLocalTripRecord(toLocalTripRecord(pendingPatch.nextTrip));
+    setPendingPatch(null);
+  };
+
+  const undoPatch = () => {
+    if (!undoTrip) return;
+    setTrip(undoTrip);
+    saveLocalTripRecord(toLocalTripRecord(undoTrip));
+    setUndoTrip(null);
+  };
 
   return (
     <section className="h-full overflow-y-auto bg-[#FAF7F3] p-5 pb-28 md:pb-5">
@@ -733,12 +764,59 @@ function ExploreWorkspacePanel() {
           <button
             key={action}
             type="button"
+            onClick={() => createPatch(action)}
+            disabled={!trip || Boolean(loadingAction)}
             className="rounded-2xl border border-neutral-200 bg-white p-4 text-left text-sm font-semibold text-neutral-800 shadow-sm transition-[border-color,box-shadow] hover:border-[#E8472A]/40 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15"
           >
-            {action}
+            {loadingAction === action ? "Building preview..." : action}
           </button>
         ))}
       </div>
+      {pendingPatch ? (
+        <div className="mt-5 rounded-2xl border border-[#E8472A]/20 bg-white p-4 shadow-sm" role="status" aria-live="polite">
+          <div className="text-sm font-bold text-neutral-900">{pendingPatch.description}</div>
+          <div className="mt-3 space-y-2">
+            {pendingPatch.operations.map((operation, index) => (
+              <div key={`${operation.path}-${index}`} className="rounded-xl bg-neutral-50 p-3 text-xs leading-5 text-neutral-600">
+                <span className="font-bold uppercase text-[#E8472A]">{operation.op}</span>{" "}
+                {describeOperation(operation)}
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={applyPatch}
+              className="rounded-full bg-[#E8472A] px-4 py-2 text-xs font-bold text-white hover:bg-[#c7351f] focus:outline-none focus:ring-4 focus:ring-[#E8472A]/20"
+            >
+              Apply
+            </button>
+            <button
+              type="button"
+              onClick={() => setPendingPatch(null)}
+              className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-bold text-neutral-700 hover:border-neutral-300 focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15"
+            >
+              Reject
+            </button>
+            <button
+              type="button"
+              onClick={() => setPendingPatch(null)}
+              className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-bold text-neutral-700 hover:border-neutral-300 focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15"
+            >
+              Edit
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {undoTrip ? (
+        <button
+          type="button"
+          onClick={undoPatch}
+          className="mt-4 rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-bold text-neutral-700 shadow-sm hover:border-[#E8472A]/40 focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15"
+        >
+          Undo last change
+        </button>
+      ) : null}
       <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-4">
         <div className="text-sm font-bold text-neutral-900">Current focus</div>
         <p className="mt-1 text-sm text-neutral-600">
@@ -804,6 +882,246 @@ function ShareWorkspacePanel({ onShare }: { onShare: () => void }) {
       </div>
     </section>
   );
+}
+
+type ExploreAction =
+  | "Add sushi nearby"
+  | "Find rainy-day alternatives"
+  | "Add a museum"
+  | "Make this day lighter"
+  | "Optimize route times"
+  | "Lower budget by 20%";
+
+type TripPatchOperation = {
+  op: "add" | "remove" | "replace" | "move" | "update";
+  path: string;
+  before?: unknown;
+  after?: unknown;
+};
+
+type PendingTripPatch = {
+  id: string;
+  description: string;
+  operations: TripPatchOperation[];
+  previousTrip: Trip;
+  nextTrip: Trip;
+};
+
+function buildExplorePatch(action: ExploreAction, trip: Trip, activeActivityId: string | null): PendingTripPatch {
+  const previousTrip = cloneTrip(trip);
+  const nextTrip = cloneTrip(trip);
+  const dayIndex = findFocusedDayIndex(nextTrip, activeActivityId);
+  const day = nextTrip.days[dayIndex];
+  const operations: TripPatchOperation[] = [];
+
+  if (action === "Add a museum") {
+    const activity = createSuggestedActivity(nextTrip, dayIndex, "museum");
+    day.activities = [...day.activities, activity];
+    operations.push({ op: "add", path: `/days/${dayIndex}/activities/${day.activities.length - 1}`, after: activity.name });
+  }
+
+  if (action === "Add sushi nearby") {
+    const activity = createSuggestedActivity(nextTrip, dayIndex, "sushi");
+    day.activities = [...day.activities, activity];
+    operations.push({ op: "add", path: `/days/${dayIndex}/activities/${day.activities.length - 1}`, after: activity.name });
+  }
+
+  if (action === "Find rainy-day alternatives") {
+    const replaceIndex = Math.max(0, day.activities.findIndex((activity) => /walk|park|view|outdoor|waterfront/i.test(`${activity.name} ${activity.category}`)));
+    const before = day.activities[replaceIndex];
+    const after = createSuggestedActivity(nextTrip, dayIndex, "rainy");
+    day.activities = day.activities.map((activity, index) => (index === replaceIndex ? after : activity));
+    operations.push({ op: "replace", path: `/days/${dayIndex}/activities/${replaceIndex}`, before: before?.name, after: after.name });
+  }
+
+  if (action === "Make this day lighter") {
+    const removableIndex = [...day.activities].map((activity, index) => ({ activity, index })).reverse().find(({ activity }) => !activity.locked)?.index ?? -1;
+    if (removableIndex >= 0) {
+      const [removed] = day.activities.splice(removableIndex, 1);
+      operations.push({ op: "remove", path: `/days/${dayIndex}/activities/${removableIndex}`, before: removed.name });
+    } else {
+      operations.push({ op: "update", path: `/days/${dayIndex}/summary`, before: day.summary, after: "All stops are locked, so Wayfarer kept the day intact." });
+    }
+  }
+
+  if (action === "Optimize route times") {
+    const beforeNames = day.activities.map((activity) => activity.name);
+    const beforeMinutes = estimateRouteMinutes(day.activities);
+    day.activities = [...day.activities].sort((a, b) => {
+      const latDiff = (a.lat ?? 0) - (b.lat ?? 0);
+      return Math.abs(latDiff) > 0.002 ? latDiff : (a.lng ?? 0) - (b.lng ?? 0);
+    });
+    const afterNames = day.activities.map((activity) => activity.name);
+    const afterMinutes = estimateRouteMinutes(day.activities);
+    operations.push({
+      op: "move",
+      path: `/days/${dayIndex}/activities`,
+      before: `${beforeNames.join(" → ")} (${beforeMinutes} min travel)`,
+      after: `${afterNames.join(" → ")} (${afterMinutes} min travel)`,
+    });
+  }
+
+  if (action === "Lower budget by 20%") {
+    const beforeTotal = tripBudgetTotal(nextTrip);
+    nextTrip.budgetItems = nextTrip.budgetItems.map((item) => ({
+      ...item,
+      estimatedCost: Math.round(item.estimatedCost * 0.8),
+    }));
+    nextTrip.days = nextTrip.days.map((tripDay) => ({
+      ...tripDay,
+      activities: tripDay.activities.map((activity) => ({
+        ...activity,
+        estimatedCost: activity.estimatedCost == null ? activity.estimatedCost : Math.round(activity.estimatedCost * 0.8),
+      })),
+    }));
+    const afterTotal = tripBudgetTotal(nextTrip);
+    operations.push({ op: "update", path: "/budgetItems", before: `$${beforeTotal}`, after: `$${afterTotal}` });
+  }
+
+  nextTrip.updatedAt = new Date().toISOString();
+  return {
+    id: `patch-${Date.now()}`,
+    description: patchDescription(action, day.date ?? day.title ?? `Day ${dayIndex + 1}`),
+    operations,
+    previousTrip,
+    nextTrip,
+  };
+}
+
+function createSuggestedActivity(trip: Trip, dayIndex: number, kind: "museum" | "sushi" | "rainy"): Activity {
+  const destination = trip.destination;
+  const base = trip.days[dayIndex]?.activities[0];
+  const defaults = suggestionDefaults(destination, kind);
+  return withActivityPhoto({
+    id: `act-${dayIndex + 1}-${Date.now()}-${kind}`,
+    title: defaults.name,
+    name: defaults.name,
+    category: defaults.category,
+    description: defaults.description,
+    locationName: defaults.name,
+    address: defaults.address,
+    lat: defaults.lat ?? base?.lat,
+    lng: defaults.lng ?? base?.lng,
+    durationMinutes: defaults.durationMinutes,
+    estimatedCost: defaults.estimatedCost,
+    currency: trip.budgetCurrency ?? "USD",
+    sourceName: "Wayfarer curated suggestion",
+    sourceUrl: defaults.sourceUrl,
+    confidence: 0.74,
+    verificationStatus: "needs_verification",
+    notes: "Review hours, tickets, and route fit before booking.",
+    locked: false,
+  }, destination);
+}
+
+function suggestionDefaults(destination: string, kind: "museum" | "sushi" | "rainy") {
+  const isParis = destination.toLowerCase().includes("paris");
+  if (kind === "museum") {
+    return isParis
+      ? {
+          name: "Musée d'Orsay",
+          category: "Museum",
+          description: "Add a world-class art museum in a former railway station with Impressionist highlights.",
+          address: "1 Rue de la Légion d'Honneur, 75007 Paris, France",
+          lat: 48.86,
+          lng: 2.3266,
+          durationMinutes: 120,
+          estimatedCost: 18,
+          sourceUrl: "https://www.musee-orsay.fr/en",
+        }
+      : genericSuggestion(destination, "Museum", "City Museum", "Add a focused museum stop with enough time to explore one collection well.", 18);
+  }
+  if (kind === "sushi") {
+    return isParis
+      ? {
+          name: "Sushi B",
+          category: "Food",
+          description: "Add a compact sushi counter near central Paris; reserve ahead and verify current hours.",
+          address: "5 Rue Rameau, 75002 Paris, France",
+          lat: 48.8685,
+          lng: 2.3375,
+          durationMinutes: 75,
+          estimatedCost: 65,
+          sourceUrl: "https://guide.michelin.com/",
+        }
+      : genericSuggestion(destination, "Food", "Sushi dinner district", "Add a highly rated sushi stop near the day's route and confirm reservations.", 55);
+  }
+  return isParis
+    ? {
+        name: "Musée de l'Orangerie",
+        category: "Museum",
+        description: "Swap in an indoor museum with Monet's Water Lilies; useful for rainy weather.",
+        address: "Jardin des Tuileries, 75001 Paris, France",
+        lat: 48.8638,
+        lng: 2.3227,
+        durationMinutes: 90,
+        estimatedCost: 13,
+        sourceUrl: "https://www.musee-orangerie.fr/en",
+      }
+    : genericSuggestion(destination, "Museum", "Indoor cultural stop", "Use this as an indoor alternative and verify current exhibits.", 15);
+}
+
+function genericSuggestion(destination: string, category: string, label: string, description: string, estimatedCost: number) {
+  return {
+    name: `${destination} ${label}`,
+    category,
+    description,
+    address: destination,
+    lat: undefined,
+    lng: undefined,
+    durationMinutes: 90,
+    estimatedCost,
+    sourceUrl: undefined,
+  };
+}
+
+function findFocusedDayIndex(trip: Trip, activeActivityId: string | null) {
+  if (!activeActivityId) return 0;
+  const index = trip.days.findIndex((day) => day.activities.some((activity) => activity.id === activeActivityId));
+  return index >= 0 ? index : 0;
+}
+
+function estimateRouteMinutes(activities: Activity[]) {
+  const pairs = activities.slice(1).map((activity, index) => [activities[index], activity] as const);
+  return pairs.reduce((sum, [from, to]) => {
+    if (from.lat == null || from.lng == null || to.lat == null || to.lng == null) return sum + 15;
+    return sum + Math.max(6, Math.round(distanceMinutes(from.lat, from.lng, to.lat, to.lng)));
+  }, 0);
+}
+
+function distanceMinutes(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const toRad = (value: number) => (value * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  const km = 6371 * 2 * Math.asin(Math.sqrt(a));
+  return (km / 4.5) * 60;
+}
+
+function tripBudgetTotal(trip: Trip) {
+  const budgetTotal = trip.budgetItems.reduce((sum, item) => sum + item.estimatedCost, 0);
+  if (budgetTotal > 0) return Math.round(budgetTotal);
+  return Math.round(trip.days.reduce((sum, day) => sum + day.activities.reduce((inner, activity) => inner + (activity.estimatedCost ?? 0), 0), 0));
+}
+
+function patchDescription(action: ExploreAction, dayLabel: string) {
+  if (action === "Optimize route times") return `Preview route optimization for ${dayLabel}`;
+  if (action === "Lower budget by 20%") return "Preview lower-budget version";
+  return `Preview: ${action}`;
+}
+
+function describeOperation(operation: TripPatchOperation) {
+  if (operation.op === "add") return `Add ${String(operation.after)}.`;
+  if (operation.op === "remove") return `Remove ${String(operation.before)}.`;
+  if (operation.op === "replace") return `Replace ${String(operation.before)} with ${String(operation.after)}.`;
+  if (operation.op === "move") return `Before: ${String(operation.before)}. After: ${String(operation.after)}.`;
+  return `Change ${String(operation.before)} to ${String(operation.after)}.`;
+}
+
+function cloneTrip(trip: Trip): Trip {
+  return JSON.parse(JSON.stringify(trip)) as Trip;
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

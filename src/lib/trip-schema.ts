@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { withActivityPhoto } from "@/lib/activity-media";
 
 export const activitySchema = z.object({
   id: z.string().min(1),
@@ -183,23 +184,25 @@ function buildFallbackDays(
       date: `Day ${dayNumber}`,
       summary: template.summary,
       theme: template.theme,
-      activities: template.activities.map((activity, actIdx) => ({
-        id: `act-${dayNumber}-${actIdx + 1}`,
-        title: activity.title,
-        name: activity.title,
-        category: activity.category,
-        description: activity.description,
-        locationName: activity.locationName,
-        address: defaults.address,
-        lat: defaults.lat + (idx * 0.012) + (actIdx * 0.006),
-        lng: defaults.lng + (idx * -0.01) + (actIdx * 0.007),
-        estimatedCost: activity.estimatedCost,
-        currency: "USD",
-        confidence: 0.72,
-        verificationStatus: "ai_suggestion" as const,
-        notes: "AI suggestion. Verify hours, transit, and booking details before travel.",
-        locked: false,
-      })),
+      activities: template.activities.map((activity, actIdx) =>
+        withActivityPhoto({
+          id: `act-${dayNumber}-${actIdx + 1}`,
+          title: activity.title,
+          name: activity.title,
+          category: activity.category,
+          description: activity.description,
+          locationName: activity.locationName,
+          address: defaults.address,
+          lat: defaults.lat + (idx * 0.012) + (actIdx * 0.006),
+          lng: defaults.lng + (idx * -0.01) + (actIdx * 0.007),
+          estimatedCost: activity.estimatedCost,
+          currency: "USD",
+          confidence: 0.72,
+          verificationStatus: "ai_suggestion" as const,
+          notes: "AI suggestion. Verify hours, transit, and booking details before travel.",
+          locked: false,
+        }, destination),
+      ),
     };
   });
 }
@@ -336,7 +339,9 @@ export function normalizeTrip(input: unknown, fallbackPrompt = "Trip plan", fall
       theme: optionalString(rawDay.theme),
       activities: useFallbackActivities
         ? fallbackDay.activities
-        : rawActivities.map((activity, actIdx) => normalizeActivity(activity, idx, actIdx)),
+        : rawActivities.map((activity, actIdx) =>
+            withActivityPhoto(normalizeActivity(activity, idx, actIdx), fallback.destination),
+          ),
     };
   });
 

@@ -5,6 +5,7 @@ import mapboxgl from "mapbox-gl";
 import { useTripStore } from "@/store/tripStore";
 import { PanelHeader } from "@/components/ui/PanelHeader";
 import { useMapboxCss } from "@/lib/mapbox-css";
+import { getActivityPhotoUrl } from "@/lib/activity-media";
 
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 const DAY_COLORS = ["#E8472A", "#7C4DFF", "#FF4DB1", "#F4A261", "#2A9D8F", "#E76F51"];
@@ -261,6 +262,9 @@ export function MapPanel({
       const el = document.createElement("div");
       el.dataset.id = act.id;
       el.dataset.color = pinColor;
+      el.setAttribute("role", "button");
+      el.setAttribute("tabindex", "0");
+      el.setAttribute("aria-label", `Select ${act.name} on the map`);
       el.style.cssText = `
         width: 28px;
         height: 36px;
@@ -302,13 +306,20 @@ export function MapPanel({
       });
 
       // Click → highlight itinerary card + open detail panel
-      el.addEventListener("click", (e) => {
-        e.stopPropagation();
-        selectById(act.id);
+      const selectMarker = (e?: Event) => {
+        e?.stopPropagation();
+        selectIndex(i);
         document.getElementById(`activity-${act.id}`)?.scrollIntoView({
           behavior: "smooth",
           block: "center",
         });
+      };
+      el.addEventListener("click", selectMarker);
+      el.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          selectMarker(e);
+        }
       });
 
       const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
@@ -374,7 +385,13 @@ export function MapPanel({
     } else {
       applyMarkers(activitiesDeduped);
     }
-  }, [trip, clearMarkers, setActiveActivityId, isCollapsed, selectById]);
+  }, [trip, clearMarkers, setActiveActivityId, isCollapsed, selectById, selectIndex]);
+
+  useEffect(() => {
+    if (isCollapsed || !activeActivityId) return;
+    const idx = locationsRef.current.findIndex((location) => location.id === activeActivityId);
+    if (idx !== -1) setSelectedIndex(idx);
+  }, [activeActivityId, isCollapsed]);
 
   // ── React to active activity (itinerary click → fly map) ─────────────────
   useEffect(() => {
@@ -525,7 +542,8 @@ function LocationDetailPanel({
   onPrev: () => void;
   onNext: () => void;
 }) {
-  const [fetchedPhoto, setFetchedPhoto] = useState<string | null>(null);
+  const [fetchedPhoto, setFetchedPhoto] = useState<{ id: string; url: string } | null>(null);
+  const [photoFailedFor, setPhotoFailedFor] = useState<string | null>(null);
   const setActivityPhoto = useTripStore((s) => s.setActivityPhoto);
 
   useEffect(() => {
@@ -545,7 +563,7 @@ function LocationDetailPanel({
       .then((r) => r.json())
       .then(({ photoUrl }) => {
         if (mounted && photoUrl) {
-          setFetchedPhoto(photoUrl);
+          setFetchedPhoto({ id: location.id, url: photoUrl });
           if (location.id) setActivityPhoto(location.id, photoUrl);
         }
       })
@@ -555,7 +573,9 @@ function LocationDetailPanel({
     };
   }, [location.name, location.address, location.photoUrl, location.imageUrl, destination, location.id, setActivityPhoto]);
 
-  const photoUrl = location.photoUrl ?? location.imageUrl ?? fetchedPhoto;
+  const cachedPhotoUrl = fetchedPhoto && fetchedPhoto.id === location.id ? fetchedPhoto.url : null;
+  const photoUrl = cachedPhotoUrl ?? getActivityPhotoUrl(location, destination);
+  const photoFailed = photoFailedFor === location.id;
   const categories =
     location.categories?.length
       ? location.categories
@@ -605,11 +625,17 @@ function LocationDetailPanel({
           </div>
         </div>
         <div className="h-20 w-28 overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100">
-          {photoUrl ? (
-            <img src={photoUrl} alt={location.name} className="h-full w-full object-cover" />
+          {photoUrl && !photoFailed ? (
+            <img
+              src={photoUrl}
+              alt={location.name}
+              loading="lazy"
+              className="h-full w-full object-cover"
+              onError={() => setPhotoFailedFor(location.id)}
+            />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-[10px] text-neutral-500">
-              Photo unavailable
+            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-100 via-rose-100 to-sky-100 px-2 text-center text-[10px] font-semibold text-neutral-500">
+              {location.name}
             </div>
           )}
         </div>
