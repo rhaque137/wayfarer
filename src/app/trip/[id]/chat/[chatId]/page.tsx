@@ -7,8 +7,16 @@ import { ChatPanel } from "@/components/chat/ChatPanel";
 import { MapPanel } from "@/components/map/MapPanel";
 import { ItineraryPanel } from "@/components/itinerary/ItineraryPanel";
 import { useTripStore } from "@/store/tripStore";
-import { buildMockTrip, parseDestinationFromPrompt } from "@/lib/trip-schema";
+import { parseDestinationFromPrompt } from "@/lib/trip-schema";
 import type { BudgetItem, Trip } from "@/lib/trip-schema";
+import {
+  completeLocalTripFromPrompt,
+  createLocalTripShell,
+  hashPrompt,
+  loadLocalTripRecord,
+  saveLocalTripRecord,
+  type LocalTripRecord,
+} from "@/lib/trip-persistence";
 
 export default function TripChatPage() {
   const [chatCollapsed, setChatCollapsed] = useState(true);
@@ -20,6 +28,8 @@ export default function TripChatPage() {
   const [activeTab, setActiveTab] = useState<"itinerary" | "map" | "explore" | "budget" | "notes" | "share" | "chat">("itinerary");
   const [workspaceNotice, setWorkspaceNotice] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isHydratingTrip, setIsHydratingTrip] = useState(true);
+  const [generatingPrompt, setGeneratingPrompt] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const params = useParams<{ id: string; chatId: string }>();
@@ -100,30 +110,72 @@ export default function TripChatPage() {
 
   useEffect(() => {
     if (!routeTripId) return;
-    if (trip?.id === routeTripId) return;
-    try {
-      const savedRaw = localStorage.getItem("wayfarer_saved_trips");
-      const saved = savedRaw ? JSON.parse(savedRaw) : [];
-      const found = Array.isArray(saved)
-        ? saved.find((item) => item?.id === routeTripId && Array.isArray(item?.days))
-        : null;
-      if (found) {
-        setTrip(found as Trip);
-      } else {
-        console.warn("trip_route_cache_miss", {
-          routeTripId,
-          loadedTripId: trip?.id,
-          hasQueryPrompt: Boolean(queryPrompt),
-        });
+    if (trip?.id === routeTripId && trip.days?.length) {
+      setIsHydratingTrip(false);
+      return;
+    }
+
+    const stored = loadLocalTripRecord(routeTripId);
+    if (stored) {
+      if (stored.status === "complete" && stored.days.length > 0) {
+        setTrip(stored);
+        setIsHydratingTrip(false);
+        return;
       }
-    } catch {
-      console.warn("trip_route_cache_read_failed", {
+      if (stored.status === "generating" || !stored.days.length) {
+        setGeneratingPrompt(stored.sourcePrompt);
+        const completed = completeLocalTripFromPrompt(stored);
+        saveLocalTripRecord(completed);
+        setLastQuery(stored.sourcePrompt);
+        setTrip(completed);
+        window.setTimeout(() => {
+          setGeneratingPrompt(null);
+          setIsHydratingTrip(false);
+        }, 450);
+        return;
+      }
+    }
+
+    if (queryPrompt) {
+      const shell = createLocalTripShell(routeTripId, queryPrompt);
+      saveLocalTripRecord(shell);
+      setGeneratingPrompt(queryPrompt);
+      const completed = completeLocalTripFromPrompt(shell);
+      saveLocalTripRecord(completed);
+      setLastQuery(queryPrompt);
+      setTrip(completed);
+      window.history.replaceState({}, "", `${window.location.pathname}?from=${from ?? "planner"}`);
+      window.setTimeout(() => {
+        setGeneratingPrompt(null);
+        setIsHydratingTrip(false);
+      }, 450);
+      return;
+    }
+
+    console.warn("trip_route_cache_miss", {
+      routeTripId,
+      loadedTripId: trip?.id,
+      hasQueryPrompt: Boolean(queryPrompt),
+    });
+    setIsHydratingTrip(false);
+  }, [routeTripId, trip?.id, trip?.days?.length, queryPrompt, setTrip, setLastQuery, from]);
+
+  useEffect(() => {
+    if (!routeTripId || !trip || trip.id !== routeTripId) return;
+    const record = toLocalTripRecord(trip);
+    saveLocalTripRecord(record);
+  }, [routeTripId, trip]);
+
+  useEffect(() => {
+    if (!routeTripId || isHydratingTrip) return;
+    if (trip?.id === routeTripId) return;
+    if (queryPrompt) return;
+    console.warn("trip_route_cache_miss", {
         routeTripId,
         loadedTripId: trip?.id,
-        hasQueryPrompt: Boolean(queryPrompt),
-      });
-    }
-  }, [routeTripId, trip?.id, queryPrompt, setTrip]);
+      hasQueryPrompt: false,
+    });
+  }, [routeTripId, isHydratingTrip, trip?.id, queryPrompt]);
 
   const requestedDestination = queryPrompt ? parseDestinationFromPrompt(queryPrompt) : null;
   const routeMismatch = Boolean(trip && routeTripId && trip.id !== routeTripId);
@@ -133,7 +185,7 @@ export default function TripChatPage() {
       requestedDestination &&
       !destinationMatches(trip.destination, requestedDestination),
   );
-  const shouldBlockWorkspace = routeMismatch || destinationConflict || !trip;
+  const shouldBlockWorkspace = !isHydratingTrip && (routeMismatch || destinationConflict || !trip);
 
   useEffect(() => {
     if (!shouldBlockWorkspace) return;
@@ -158,7 +210,9 @@ export default function TripChatPage() {
 
   const generateFromPrompt = () => {
     if (!queryPrompt || !routeTripId) return;
-    const nextTrip = buildMockTrip(queryPrompt, routeTripId);
+    const shell = createLocalTripShell(routeTripId, queryPrompt);
+    const nextTrip = completeLocalTripFromPrompt(shell);
+    saveLocalTripRecord(nextTrip);
     setLastQuery(queryPrompt);
     setTrip(nextTrip);
     setWorkspaceNotice(`Generated a local ${nextTrip.destination} itinerary from this link.`);
@@ -227,6 +281,10 @@ export default function TripChatPage() {
         }}
       />
     );
+  }
+
+  if (isHydratingTrip || generatingPrompt) {
+    return <TripGenerationProgress prompt={generatingPrompt ?? queryPrompt ?? lastQuery} />;
   }
 
   return (
@@ -554,6 +612,30 @@ function TripRecoveryState({
   );
 }
 
+function TripGenerationProgress({ prompt }: { prompt: string | null }) {
+  return (
+    <main className="flex min-h-dvh items-center justify-center bg-[#F5F0EB] px-4 py-10">
+      <section className="w-full max-w-lg rounded-3xl border border-neutral-200 bg-white p-6 text-center shadow-sm sm:p-8">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#F5EAE6] text-[#E8472A]">
+          <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" opacity="0.2" />
+            <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+          </svg>
+        </div>
+        <h1 className="mt-4 text-2xl font-bold text-neutral-950">Building your itinerary</h1>
+        <p className="mt-2 text-sm leading-6 text-neutral-600">
+          Understanding your trip, choosing real places, arranging days, and saving the plan locally.
+        </p>
+        {prompt ? (
+          <div className="mt-5 rounded-2xl bg-neutral-50 p-4 text-left text-xs leading-5 text-neutral-600">
+            {prompt}
+          </div>
+        ) : null}
+      </section>
+    </main>
+  );
+}
+
 function destinationMatches(loaded: string, requested: string) {
   const normalize = (value: string) =>
     value
@@ -565,6 +647,21 @@ function destinationMatches(loaded: string, requested: string) {
   const right = normalize(requested);
   if (!left || !right) return true;
   return left.includes(right) || right.includes(left);
+}
+
+function toLocalTripRecord(trip: Trip): LocalTripRecord {
+  const now = new Date().toISOString();
+  const sourcePrompt = trip.sourcePrompt ?? "";
+  return {
+    ...trip,
+    sourcePrompt,
+    promptHash: trip.promptHash ?? hashPrompt(sourcePrompt),
+    status: trip.status === "generating" || trip.status === "failed" || trip.status === "draft" ? trip.status : "complete",
+    visibility: trip.visibility ?? "local",
+    schemaVersion: trip.schemaVersion ?? 2,
+    createdAt: trip.createdAt ?? now,
+    updatedAt: trip.updatedAt ?? now,
+  };
 }
 
 function BudgetWorkspacePanel() {

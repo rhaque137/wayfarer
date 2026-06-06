@@ -9,6 +9,7 @@ import { HelpWidget } from "@/components/home/HelpWidget";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { PLACEHOLDER_IMAGE, getDestinationImage } from "@/lib/destination-images";
 import { useAuth } from "@/lib/auth/context";
+import { createLocalTripShell, saveLocalTripRecord } from "@/lib/trip-persistence";
 import { CREATE_TRIP_ERROR_MESSAGE, MAX_TRIP_PROMPT_LENGTH } from "@/lib/trip-limits";
 
 const AuthBar = dynamic(() => import("@/components/home/AuthBar").then((mod) => mod.AuthBar), {
@@ -92,7 +93,9 @@ export default function Home() {
       });
       const data = await res.json().catch(() => null);
       if (res.ok && data?.id) {
-        router.push(`/trip/${data.id}/chat/main?q=${encodeURIComponent(trimmedQuery)}`);
+        const shell = createLocalTripShell(data.id, trimmedQuery);
+        saveLocalTripRecord(shell);
+        router.push(`/trip/${data.id}/chat/main?from=planner`);
         return;
       }
       setCreateTripError(CREATE_TRIP_ERROR_MESSAGE);

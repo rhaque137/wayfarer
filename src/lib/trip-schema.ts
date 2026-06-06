@@ -78,6 +78,10 @@ export const tripSchema = z.object({
   sourcePrompt: z.string().optional(),
   isPublic: z.boolean().optional(),
   shareId: z.string().optional(),
+  promptHash: z.string().optional(),
+  status: z.enum(["draft", "generating", "complete", "failed"]).optional(),
+  visibility: z.enum(["private", "local", "public_snapshot"]).optional(),
+  schemaVersion: z.number().int().positive().optional(),
 });
 
 export const aiTripResponseSchema = z.object({
