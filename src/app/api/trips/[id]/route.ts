@@ -19,7 +19,8 @@ export async function GET(_req: Request, context: { params: Promise<unknown> }) 
       .eq("public_id", id)
       .maybeSingle();
     if (!error && data?.spec) {
-      const normalized = normalizeTrip(data.spec, "Saved trip", id);
+      const sourcePrompt = (data.spec as { sourcePrompt?: string })?.sourcePrompt || "Saved trip";
+      const normalized = normalizeTrip(data.spec, sourcePrompt, id);
       return NextResponse.json({ trip: { ...normalized, id } });
     }
     if (error) console.warn("trip_lookup_failed", error.message);

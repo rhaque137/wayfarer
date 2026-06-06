@@ -11,6 +11,7 @@ import { MessageBubble } from "@/components/chat/MessageBubble";
 import { QuickActions } from "@/components/chat/QuickActions";
 import { ChatInputBar } from "@/components/chat/ChatInputBar";
 import { buildMockTrip, normalizeTrip } from "@/lib/trip-schema";
+import { buildCoffeeShopPatch, isCoffeeShopEditRequest, summarizePatch } from "@/lib/itinerary-patches";
 
 export function ChatPanel({
   isCollapsed = false,
@@ -19,13 +20,24 @@ export function ChatPanel({
   isCollapsed?: boolean;
   onToggle?: () => void;
 }) {
-  const { trip, setTrip, setPendingAIChanges, lastQuery, setLastQuery, messages: storedMessages, setMessages } = useTripStore();
+  const {
+    trip,
+    setTrip,
+    setPendingAIChanges,
+    setPendingPatch,
+    lastQuery,
+    setLastQuery,
+    messages: storedMessages,
+    setMessages,
+  } = useTripStore();
   const params = useParams<{ id?: string }>();
   const routeTripId = params.id;
   const bottomRef = useRef<HTMLDivElement>(null);
   const sentRef = useRef(false);
 
   const [input, setInput] = useState("");
+  const tripRef = useRef(trip);
+  useEffect(() => { tripRef.current = trip; }, [trip]);
   const transport = useMemo(() => new DefaultChatTransport({ api: "/api/chat" }), []);
 
   const { messages, sendMessage, status, error, stop, clearError, setMessages: setChatMessages } = useChat({
@@ -50,7 +62,7 @@ export function ChatPanel({
 
       if (handled) return;
 
-      // Fallback: parse JSON from assistant text
+      // Parse JSON from assistant text; extract friendly message and trip
       const textContent = message.parts
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ?.filter((p: any) => p.type === "text")
@@ -61,6 +73,19 @@ export function ChatPanel({
       try {
         const cleaned = textContent.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
         const data = JSON.parse(cleaned);
+
+        // Rewrite the last message to show only the friendly text, not raw JSON
+        const friendlyText = typeof data.message === "string" && data.message.trim() ? data.message.trim() : null;
+        if (friendlyText) {
+          setChatMessages((prev: any[]) =>
+            prev.map((m: any) =>
+              m.id === message.id
+                ? { ...m, parts: [{ type: "text", text: friendlyText }] }
+                : m,
+            ),
+          );
+        }
+
         if (data.trip) {
           if (isBudgetOnlyTrip(data.trip)) return;
           const tripData = data.trip;
@@ -68,10 +93,58 @@ export function ChatPanel({
           setPendingAIChanges(true);
         }
       } catch {
-        // Not JSON or follow-up message — that's fine, just display the text
+        // Not JSON — plain conversational response, display as-is
       }
     },
   });
+
+  const send = (text: string) => {
+    const cleanText = text.trim();
+    if (!cleanText) return;
+    if (handleLocalTripEdit(cleanText)) return;
+    const tripContext = tripRef.current ? JSON.stringify(tripRef.current) : null;
+    sendMessage({ text: cleanText, ...(tripContext ? { body: { tripContext } } : {}) });
+  };
+
+  const handleLocalTripEdit = (text: string) => {
+    const currentTrip = tripRef.current;
+    if (!currentTrip || !isCoffeeShopEditRequest(text)) return false;
+
+    if (routeTripId && currentTrip.id !== routeTripId) {
+      appendLocalMessages(
+        text,
+        "I could not preview that edit because the loaded trip does not match this route. Open the correct trip and try again.",
+      );
+      return true;
+    }
+
+    const pendingPatch = buildCoffeeShopPatch(currentTrip);
+    setPendingPatch(pendingPatch);
+    appendLocalMessages(
+      text,
+      `${pendingPatch.patch.summary} Preview ready: ${summarizePatch(pendingPatch)}. Review the highlighted AI suggested changes banner, then Accept or Reject.`,
+    );
+    return true;
+  };
+
+  const appendLocalMessages = (userText: string, assistantText: string) => {
+    const now = new Date();
+    setChatMessages((prev: any[]) => [
+      ...prev,
+      {
+        id: `user-${Date.now()}`,
+        role: "user",
+        createdAt: now,
+        parts: [{ type: "text", text: userText }],
+      },
+      {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        createdAt: now,
+        parts: [{ type: "text", text: assistantText }],
+      },
+    ]);
+  };
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -111,9 +184,9 @@ export function ChatPanel({
         messages.map((m: any) => ({
           id: m.id,
           role: m.role,
-          content: m.content ?? "",
+          content: messageText(m),
           timestamp: m.createdAt ? new Date(m.createdAt).getTime() : Date.now(),
-        }))
+        })).filter((m: any) => m.content.trim()),
       );
     }
   }, [messages, setMessages]);
@@ -134,7 +207,8 @@ export function ChatPanel({
       setTrip(buildMockTrip(lastQuery, routeTripId));
       sendMessage({ text: lastQuery });
     }
-  }, [sendMessage, lastQuery, trip, routeTripId, setLastQuery, setTrip]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sendMessage, lastQuery, trip?.id, routeTripId, setLastQuery, setTrip]);
 
   const quickActions = [
     { label: "Build a day-by-day itinerary", prompt: "Build me a detailed day-by-day itinerary with timings and tips" },
@@ -192,7 +266,7 @@ export function ChatPanel({
                 <button
                   onClick={() => {
                     clearError?.();
-                    sendMessage({ text: lastQuery });
+                    send(lastQuery ?? "");
                   }}
                   className="underline"
                 >
@@ -210,7 +284,7 @@ export function ChatPanel({
             <div className="rounded-2xl border border-neutral-200 bg-white p-4 text-sm text-neutral-600 shadow-sm">
               Try: <span className="text-neutral-900">&quot;4 days in Kyoto for 2 people, love temples and food&quot;</span>
             </div>
-            <QuickActions actions={quickActions} onAction={(prompt) => sendMessage({ text: prompt })} />
+            <QuickActions actions={quickActions} onAction={(prompt) => send(prompt)} />
           </div>
         )}
 
@@ -229,7 +303,7 @@ export function ChatPanel({
 
       {trip && displayMessages.length > 0 && (
         <div className="border-t border-neutral-200 px-4 py-2 bg-white/70">
-          <QuickActions actions={quickActions} onAction={(prompt) => sendMessage({ text: prompt })} />
+          <QuickActions actions={quickActions} onAction={(prompt) => send(prompt)} />
         </div>
       )}
 
@@ -241,7 +315,7 @@ export function ChatPanel({
             e.preventDefault();
             if (!input.trim()) return;
             setLastQuery(input.trim());
-            sendMessage({ text: input });
+            send(input);
             setInput("");
           }}
           isLoading={status === "streaming" || status === "submitted"}
@@ -276,4 +350,14 @@ function isBudgetOnlyTrip(tripData: any) {
   });
   const allNoCoords = acts.every((a: any) => a.lat == null || a.lng == null);
   return hits.length >= Math.ceil(acts.length * 0.7) && allNoCoords;
+}
+
+function messageText(message: any) {
+  if (typeof message?.content === "string" && message.content.trim()) return message.content.trim();
+  const parts = Array.isArray(message?.parts) ? message.parts : [];
+  return parts
+    .filter((part: any) => part?.type === "text" && typeof part.text === "string")
+    .map((part: any) => part.text)
+    .join("")
+    .trim();
 }

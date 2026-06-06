@@ -7,6 +7,7 @@ import { AIChangesBanner } from "@/components/itinerary/AIChangesBanner";
 import { DayBlock } from "@/components/itinerary/DayBlock";
 import { SavedActivitiesGrid } from "@/components/itinerary/SavedActivitiesGrid";
 import { useTripStore } from "@/store/tripStore";
+import { summarizePatch } from "@/lib/itinerary-patches";
 
 export function ItineraryPanel({
   isCollapsed = false,
@@ -15,7 +16,7 @@ export function ItineraryPanel({
   isCollapsed?: boolean;
   onToggle?: () => void;
 }) {
-  const { trip, pendingAIChanges, savedActivities, acceptChanges, rejectChanges } = useTripStore();
+  const { trip, pendingAIChanges, pendingPatch, savedActivities, acceptChanges, rejectChanges } = useTripStore();
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
 
   if (isCollapsed) {
@@ -33,10 +34,10 @@ export function ItineraryPanel({
               Describe a trip in chat, edit your prompt, or return home to start over.
             </div>
             <Link
-              href="/"
+              href="/try"
               className="mt-4 inline-flex rounded-full bg-[#E8472A] px-4 py-2 text-xs font-semibold text-white focus:outline-none focus:ring-4 focus:ring-[#E8472A]/25"
             >
-              Back home
+              Start planning
             </Link>
           </div>
         </div>
@@ -94,7 +95,11 @@ export function ItineraryPanel({
         </div>
 
         {pendingAIChanges && (
-          <AIChangesBanner onAccept={acceptChanges} onReject={rejectChanges} />
+          <AIChangesBanner
+            onAccept={acceptChanges}
+            onReject={rejectChanges}
+            summary={pendingPatch ? summarizePatch(pendingPatch) : undefined}
+          />
         )}
 
         <div className="space-y-4">
@@ -108,6 +113,7 @@ export function ItineraryPanel({
                 theme={day.title ?? day.summary}
                 activities={day.activities}
                 dayColorIndex={trip.days.findIndex((item) => item.id === day.id)}
+                dayId={day.id}
               />
             ))}
         </div>

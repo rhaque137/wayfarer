@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Activity, useTripStore } from "@/store/tripStore";
+import { withActivityPhoto } from "@/lib/activity-media";
 import { ItineraryPlaceCard } from "@/components/itinerary/ItineraryPlaceCard";
 
 interface Props {
@@ -10,13 +11,16 @@ interface Props {
   theme?: string;
   activities: Activity[];
   dayColorIndex?: number;
+  dayId?: string;
 }
 
 const DAY_COLORS = ["#E8472A", "#7C4DFF", "#FF4DB1", "#F4A261", "#2A9D8F", "#E76F51"];
 
-export function DayBlock({ day, date, theme, activities, dayColorIndex = 0 }: Props) {
+export function DayBlock({ day, date, theme, activities, dayColorIndex = 0, dayId }: Props) {
   const destination = useTripStore((s) => s.trip?.destination);
   const totalDays = useTripStore((s) => s.trip?.days.length ?? 0);
+  const updateTrip = useTripStore((s) => s.updateTrip);
+  const trip = useTripStore((s) => s.trip);
   const [travelInfo, setTravelInfo] = useState<Record<string, { time: string; distance: string; directions: string }>>(
     {},
   );
@@ -115,6 +119,41 @@ export function DayBlock({ day, date, theme, activities, dayColorIndex = 0 }: Pr
 
   const showContent = isMobile ? true : !collapsed;
 
+  const optimizeRoute = useCallback(() => {
+    if (!trip || !dayId) return;
+    const sorted = [...activities].sort((a, b) => {
+      const latDiff = (a.lat ?? 0) - (b.lat ?? 0);
+      return Math.abs(latDiff) > 0.002 ? latDiff : (a.lng ?? 0) - (b.lng ?? 0);
+    });
+    updateTrip({
+      days: trip.days.map((d) => d.id === dayId ? { ...d, activities: sorted } : d),
+    });
+  }, [trip, dayId, activities, updateTrip]);
+
+  const addStop = useCallback(() => {
+    if (!trip || !dayId || !destination) return;
+    const base = activities[0];
+    const newActivity = withActivityPhoto({
+      id: `act-${dayId}-${Date.now()}`,
+      title: `${destination} stop`,
+      name: `${destination} stop`,
+      category: "Activity",
+      description: "Add details for this stop.",
+      locationName: destination,
+      address: destination,
+      lat: base?.lat,
+      lng: base?.lng,
+      estimatedCost: 0,
+      currency: "USD",
+      verificationStatus: "needs_verification" as const,
+      notes: "Edit this stop with your chosen place.",
+      locked: false,
+    }, destination);
+    updateTrip({
+      days: trip.days.map((d) => d.id === dayId ? { ...d, activities: [...d.activities, newActivity] } : d),
+    });
+  }, [trip, dayId, destination, activities, updateTrip]);
+
   const estimatedCost = activities.reduce((sum, activity) => sum + (activity.estimatedCost ?? 0), 0);
 
   return (
@@ -144,7 +183,7 @@ export function DayBlock({ day, date, theme, activities, dayColorIndex = 0 }: Pr
         {!isMobile && <span className="ml-3 text-xs text-neutral-500">{collapsed ? "▸" : "▾"}</span>}
       </button>
       {showContent && (
-        <ul className="space-y-2">
+        <ul className="space-y-2" role="list">
         {activities.map((act, index) => {
           const next = activities[index + 1];
           const key = next ? `${act.id}__${next.id}` : "";
@@ -185,6 +224,27 @@ export function DayBlock({ day, date, theme, activities, dayColorIndex = 0 }: Pr
           );
         })}
         </ul>
+      )}
+
+      {showContent && (
+        <div className="mt-3 flex flex-wrap gap-2 border-t border-neutral-100 pt-3">
+          <button
+            type="button"
+            onClick={addStop}
+            className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-neutral-700 hover:border-[#E8472A] hover:text-[#E8472A] focus:outline-none focus:ring-2 focus:ring-[#E8472A]/20"
+          >
+            + Add stop
+          </button>
+          {activities.length > 1 && (
+            <button
+              type="button"
+              onClick={optimizeRoute}
+              className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-neutral-700 hover:border-[#E8472A] hover:text-[#E8472A] focus:outline-none focus:ring-2 focus:ring-[#E8472A]/20"
+            >
+              Optimize route
+            </button>
+          )}
+        </div>
       )}
     </section>
   );

@@ -170,7 +170,13 @@ export function HeroSection({
           <div className="text-sm font-semibold text-neutral-900">Plan your trip</div>
           <div className="mt-1 text-xs text-neutral-500">Free to use — no credit card required.</div>
 
-          <div className="mt-5 grid gap-3">
+          <form
+            className="mt-5 grid gap-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onSubmit();
+            }}
+          >
             <Field label="Destination" htmlFor="trip-destination" required>
               <input
                 id="trip-destination"
@@ -268,7 +274,7 @@ export function HeroSection({
             ) : null}
 
             <button
-              onClick={onSubmit}
+              type="submit"
               disabled={isSubmitting || !intake.destination.trim() || (!intake.dates.trim() && !intake.tripLength.trim())}
               aria-describedby={error ? "hero-search-error" : undefined}
               className="h-12 w-full rounded-xl bg-foreground text-sm font-semibold text-white transition-all duration-200 hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-[#E8472A]/25 disabled:cursor-not-allowed disabled:opacity-60"
@@ -280,7 +286,7 @@ export function HeroSection({
                 Understanding your trip → building itinerary → adding map details
               </div>
             ) : null}
-          </div>
+          </form>
 
           <div className="mt-5 border-t border-neutral-200 pt-4">
             <div className="text-xs font-semibold text-neutral-500">Try a template</div>

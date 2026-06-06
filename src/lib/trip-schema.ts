@@ -120,15 +120,19 @@ const destinationDefaults: Record<string, { lat: number; lng: number; address: s
   bali: { lat: -8.4095, lng: 115.1889, address: "Bali, Indonesia" },
   barcelona: { lat: 41.3874, lng: 2.1686, address: "Barcelona, Spain" },
   "new york": { lat: 40.7128, lng: -74.006, address: "New York, NY" },
+  "new york city": { lat: 40.7128, lng: -74.006, address: "New York, NY" },
+  nyc: { lat: 40.7128, lng: -74.006, address: "New York, NY" },
+  toronto: { lat: 43.6532, lng: -79.3832, address: "Toronto, Ontario, Canada" },
 };
 
 export function parseDestinationFromPrompt(prompt: string) {
   const lower = prompt.toLowerCase();
-  for (const key of Object.keys(destinationDefaults)) {
+  for (const key of Object.keys(destinationDefaults).sort((a, b) => b.length - a.length)) {
     if (lower.includes(key)) return titleCase(key);
   }
-  const match = prompt.match(/\b(?:in|to|for)\s+([A-Z][A-Za-z\s-]{2,40})(?:\s|,|$)/);
-  return match?.[1]?.trim() || "Lisbon";
+  const match = prompt.match(/\b(?:in|to|for)\s+([A-Z][A-Za-z\s-]{1,60}?)(?=\s+(?:with|including|near|focused on|featuring|that|where|and|under|around|on a)\b|[.,;:]|$)/);
+  const destination = match?.[1]?.replace(/\s+(?:itinerary|trip|plan)$/i, "").trim();
+  return destination || "Lisbon";
 }
 
 export function parseTripLengthDays(prompt: string) {
@@ -151,7 +155,7 @@ export function parseTripLengthDays(prompt: string) {
 
 export function buildMockTrip(prompt: string, id = `local-${Date.now()}`): Trip {
   const destination = parseDestinationFromPrompt(prompt);
-  const defaults = destinationDefaults[destination.toLowerCase()] ?? destinationDefaults.lisbon;
+  const defaults = destinationDefaults[destination.toLowerCase()];
   const requestedDays = parseTripLengthDays(prompt) ?? 3;
 
   return {
@@ -184,7 +188,7 @@ export function buildMockTrip(prompt: string, id = `local-${Date.now()}`): Trip 
 function buildFallbackDays(
   destination: string,
   requestedDays: number,
-  defaults: { lat: number; lng: number; address: string },
+  defaults?: { lat: number; lng: number; address: string },
 ): Day[] {
   const templates = getDestinationTemplates(destination);
 
@@ -207,9 +211,9 @@ function buildFallbackDays(
           category: activity.category,
           description: activity.description,
           locationName: activity.locationName,
-          address: activity.address ?? defaults.address,
-          lat: activity.lat ?? defaults.lat + (idx * 0.012) + (actIdx * 0.006),
-          lng: activity.lng ?? defaults.lng + (idx * -0.01) + (actIdx * 0.007),
+          address: activity.address ?? defaults?.address ?? destination,
+          lat: activity.lat ?? (defaults ? defaults.lat + (idx * 0.012) + (actIdx * 0.006) : undefined),
+          lng: activity.lng ?? (defaults ? defaults.lng + (idx * -0.01) + (actIdx * 0.007) : undefined),
           estimatedCost: activity.estimatedCost,
           currency: "USD",
           confidence: 0.72,
@@ -277,6 +281,54 @@ function getDestinationTemplates(destination: string) {
       },
     ];
   }
+  if (isParis(destination)) {
+    return [
+      {
+        title: "Saint-Germain, Left Bank, and the Musée d'Orsay",
+        summary: "Start with a café ritual, world-class Impressionist art, and an evening in the Latin Quarter.",
+        theme: "Coffee, art, neighborhood",
+        activities: [
+          templateActivity("Café de Flore breakfast", "Cafe", "Classic Saint-Germain café with legendary croissants and café crème. Arrive before 9 AM to beat crowds.", "Café de Flore", 18, "172 Boulevard Saint-Germain, 75006 Paris", 48.854, 2.3328),
+          templateActivity("Musée d'Orsay", "Museum", "Impressionist masterworks in a stunning former railway station. Book timed tickets in advance.", "Musée d'Orsay", 16, "1 Rue de la Légion d'Honneur, 75007 Paris", 48.86, 2.3266),
+          templateActivity("Sainte-Chapelle", "Landmark", "Gothic chapel on Île de la Cité with extraordinary medieval stained glass — compact and unmissable.", "Sainte-Chapelle", 13, "8 Boulevard du Palais, 75001 Paris", 48.8554, 2.3450),
+          templateActivity("Frenchie Bar à Vins", "Restaurant", "Wine bar sibling of Frenchie restaurant; arrive early for a counter seat and natural wine with small plates.", "Frenchie Bar à Vins", 55, "6 Rue du Nil, 75002 Paris", 48.8631, 2.3489),
+        ],
+      },
+      {
+        title: "Le Marais, Île Saint-Louis, and Bastille",
+        summary: "Medieval streets, the best falafel in Paris, Berthillon ice cream, and a covered market.",
+        theme: "History, street food, neighborhoods",
+        activities: [
+          templateActivity("L'As du Fallafel lunch", "Restaurant", "Lior's legendary crispy falafel on Rue des Rosiers in the Jewish quarter. Cash only, line moves fast.", "L'As du Fallafel", 8, "34 Rue des Rosiers, 75004 Paris", 48.857, 2.3555),
+          templateActivity("Place des Vosges and Maison de Victor Hugo", "Landmark", "Paris's oldest planned square. The Victor Hugo house museum is free and excellent.", "Place des Vosges", 0, "Place des Vosges, 75004 Paris", 48.8553, 2.3625),
+          templateActivity("Île Saint-Louis and Berthillon", "Walk", "Walk the island's single main street, stop at Berthillon for sorbet, and admire the Seine from the quais.", "Île Saint-Louis", 10, "Île Saint-Louis, 75004 Paris", 48.8503, 2.3563),
+          templateActivity("Marché des Enfants Rouges evening", "Food", "Paris's oldest covered market with Moroccan, Japanese, and French stalls — ideal for a casual dinner.", "Marché des Enfants Rouges", 30, "39 Rue de Bretagne, 75003 Paris", 48.8623, 2.3617),
+        ],
+      },
+      {
+        title: "Montmartre, Palais Royal, and sunset at Sacré-Cœur",
+        summary: "Climb to the village-above-the-city, wander the arcades, and end with a hilltop sunset.",
+        theme: "Views, art history, evening",
+        activities: [
+          templateActivity("Palais Royal gardens and galleries", "Walk", "Elegant arcaded gardens; browse concept stores under the arches and pause at the striped columns.", "Palais Royal", 0, "Place du Palais-Royal, 75001 Paris", 48.8638, 2.337),
+          templateActivity("Montmartre and Place du Tertre", "Walk", "Wander the steep cobblestone streets, watch artists at work, and find a quiet side street off the tourist drag.", "Montmartre", 0, "Place du Tertre, 75018 Paris", 48.8866, 2.3408),
+          templateActivity("Sacré-Cœur at sunset", "Viewpoint", "Climb to the terrace steps for the best panoramic view of Paris as the city lights up at dusk.", "Sacré-Cœur", 0, "35 Rue du Chevalier de la Barre, 75018 Paris", 48.8867, 2.3431),
+          templateActivity("Coquelicot bakery breakfast or Le Relais de la Butte dinner", "Restaurant", "Coquelicot for morning pastries or the Relais de la Butte for classic French bistro dinner after the sunset.", "Coquelicot", 22, "24 Rue des Abbesses, 75018 Paris", 48.8843, 2.3382),
+        ],
+      },
+      {
+        title: "Canal Saint-Martin, République, and a Seine evening",
+        summary: "A calmer, local day along the canal, indie coffee shops, and a bridge stroll at night.",
+        theme: "Neighborhoods, cafes, evening",
+        activities: [
+          templateActivity("Canal Saint-Martin morning walk", "Walk", "Iron footbridges, tree-lined quais, and concept stores; peak atmosphere on weekday mornings.", "Canal Saint-Martin", 0, "Canal Saint-Martin, 75010 Paris", 48.8687, 2.3628),
+          templateActivity("Ten Belles coffee", "Cafe", "Specialty coffee roaster on the canal — one of the best flat whites in Paris.", "Ten Belles", 8, "10 Rue de la Grange aux Belles, 75010 Paris", 48.8717, 2.3634),
+          templateActivity("Shakespeare and Company bookshop", "Walk", "Iconic English-language bookshop on the Left Bank with views of Notre-Dame. Free to browse.", "Shakespeare and Company", 0, "37 Rue de la Bûcherie, 75005 Paris", 48.8527, 2.3474),
+          templateActivity("Septime or Clown Bar dinner", "Restaurant", "Reserve weeks ahead for Septime's market-driven tasting menu, or walk into Clown Bar for natural wine and small plates.", "Septime", 85, "80 Rue de Charonne, 75011 Paris", 48.853, 2.3769),
+        ],
+      },
+    ];
+  }
   if (isNewYork(destination)) {
     return [
       {
@@ -326,35 +378,230 @@ function getDestinationTemplates(destination: string) {
     ];
   }
 
+  if (destination.toLowerCase().includes("toronto")) {
+    return [
+      {
+        title: "Downtown icons and Queen West coffee",
+        summary: "Start central, then connect Toronto's food market, art, and west-end neighborhoods.",
+        theme: "Downtown, art, coffee",
+        activities: [
+          templateActivity("Fahrenheit Coffee Richmond", "Cafe", "Begin with a specific independent coffee stop near the financial district before sightseeing.", "Fahrenheit Coffee", 7, "120 Lombard St, Toronto, ON M5C 3H5", 43.6519, -79.3728),
+          templateActivity("St. Lawrence Market lunch", "Food", "Browse Toronto's classic food market and try a peameal bacon sandwich or seasonal vendor lunch.", "St. Lawrence Market", 18, "93 Front St E, Toronto, ON M5E 1C3", 43.6487, -79.3715),
+          templateActivity("Art Gallery of Ontario", "Museum", "A strong culture anchor with Canadian, Indigenous, and contemporary collections.", "Art Gallery of Ontario", 30, "317 Dundas St W, Toronto, ON M5T 1G4", 43.6536, -79.3925),
+          templateActivity("Queen Street West and Trinity Bellwoods", "Walk", "Walk boutiques, galleries, and the park edge for a local-feeling late afternoon.", "Queen Street West", 0, "Queen St W & Trinity Bellwoods Park, Toronto, ON", 43.6471, -79.4138),
+        ],
+      },
+      {
+        title: "Kensington, campus, and Ossington",
+        summary: "A neighborhood-heavy day built around markets, cafes, and a relaxed dinner strip.",
+        theme: "Neighborhoods, food, cafes",
+        activities: [
+          templateActivity("FIKA Cafe Kensington", "Cafe", "Add a Swedish-style independent coffee stop in Kensington Market before browsing.", "FIKA Cafe", 8, "28 Kensington Ave, Toronto, ON M5T 2J9", 43.6548, -79.4005),
+          templateActivity("Kensington Market food crawl", "Food", "Snack through bakeries, tacos, spices, and vintage shops in one of Toronto's best walking areas.", "Kensington Market", 22, "Kensington Market, Toronto, ON", 43.6545, -79.4007),
+          templateActivity("Royal Ontario Museum", "Museum", "Use the ROM as a major culture stop; verify temporary exhibits and ticket policies.", "Royal Ontario Museum", 28, "100 Queens Park, Toronto, ON M5S 2C6", 43.6677, -79.3948),
+          templateActivity("Ossington dinner at Union or Mamakas", "Restaurant", "Finish on Ossington with a reservation-friendly dinner corridor and bars nearby.", "Ossington Avenue", 45, "Ossington Ave, Toronto, ON", 43.6468, -79.4197),
+        ],
+      },
+      {
+        title: "Waterfront, Distillery, and east-end food",
+        summary: "Pair waterfront views with brick-lane architecture and a focused dinner plan.",
+        theme: "Waterfront, architecture, dinner",
+        activities: [
+          templateActivity("Boxcar Social Harbourfront", "Cafe", "Coffee near the lake before a waterfront walk; verify current hours before heading over.", "Boxcar Social Harbourfront", 8, "235 Queens Quay W, Toronto, ON M5J 2G8", 43.6391, -79.3836),
+          templateActivity("Harbourfront and Toronto Music Garden", "Walk", "Use the lakefront path for views, public art, and an easy low-cost morning.", "Toronto Music Garden", 0, "479 Queens Quay W, Toronto, ON M5V 2Y3", 43.6369, -79.3947),
+          templateActivity("Distillery District", "Shopping", "Brick lanes, galleries, and design shops in a compact pedestrian district.", "Distillery District", 10, "55 Mill St, Toronto, ON M5A 3C4", 43.6503, -79.3596),
+          templateActivity("Pai Northern Thai Kitchen dinner", "Restaurant", "A specific downtown dinner pick with strong vegetarian and group options; expect a wait.", "Pai Northern Thai Kitchen", 35, "18 Duncan St, Toronto, ON M5H 3G8", 43.6479, -79.3887),
+        ],
+      },
+    ];
+  }
+
+  if (isLisbon(destination)) {
+    return [
+      {
+        title: "Alfama, Miradouros, and a Fado evening",
+        summary: "Historic hilltop streets, azulejo-tiled viewpoints, and live Fado music.",
+        theme: "History, views, music",
+        activities: [
+          templateActivity("Pastéis de Belém breakfast", "Cafe", "The original pastel de nata bakery; arrive early and eat them warm with cinnamon and sugar at the marble counter.", "Pastéis de Belém", 5, "Rua de Belém 84-92, 1300-085 Lisboa", 38.6975, -9.2033),
+          templateActivity("São Jorge Castle and Alfama walk", "Landmark", "Moorish hilltop fortress with sweeping Tagus views, then wind down through Alfama's steep lanes.", "São Jorge Castle", 10, "Rua de Santa Cruz do Castelo, 1100-129 Lisboa", 38.7139, -9.1337),
+          templateActivity("Miradouro das Portas do Sol", "Viewpoint", "One of Lisbon's best lookout points — perfect at golden hour with a Sagres beer.", "Miradouro das Portas do Sol", 0, "Largo das Portas do Sol, 1100-411 Lisboa", 38.7113, -9.1307),
+          templateActivity("Tasca do Chico Fado dinner", "Nightlife", "Intimate Fado venue in Bairro Alto; book well ahead for dinner and a live show.", "Tasca do Chico", 45, "Rua do Diário de Notícias 39, 1200-143 Lisboa", 38.7108, -9.1441),
+        ],
+      },
+      {
+        title: "LX Factory, Belém, and the Tejo waterfront",
+        summary: "A creative market complex, Portugal's most famous monument, and an evening on the river.",
+        theme: "Culture, food, river",
+        activities: [
+          templateActivity("LX Factory Sunday market", "Shopping", "Converted industrial complex with design shops, vintage stalls, and great brunch spots. Sunday market is the highlight.", "LX Factory", 0, "Rua Rodrigues de Faria 103, 1300-501 Lisboa", 38.7031, -9.1773),
+          templateActivity("Torre de Belém", "Landmark", "Iconic 16th-century tower on the Tagus — buy tickets online to skip the queue.", "Torre de Belém", 8, "Avenida Brasília, 1400-038 Lisboa", 38.6916, -9.2159),
+          templateActivity("Jerónimos Monastery", "Landmark", "Manueline Gothic masterpiece and the resting place of Vasco da Gama; the cloisters are unmissable.", "Mosteiro dos Jerónimos", 10, "Praça do Império 1400-206 Lisboa", 38.6978, -9.2065),
+          templateActivity("Time Out Market Lisboa dinner", "Food", "Best-in-class food hall under one roof: Henrique Sá Pessoa's stall, A Cevicheria, and a dozen great options.", "Time Out Market", 30, "Avenida 24 de Julho 49, 1200-479 Lisboa", 38.707, -9.1476),
+        ],
+      },
+      {
+        title: "Bairro Alto, Chiado, and the Tram 28",
+        summary: "A day for aperitivos, bookshops, boutiques, and Lisbon's most scenic tram route.",
+        theme: "Shopping, cafes, evening",
+        activities: [
+          templateActivity("Tram 28 scenic ride", "Walk", "Lisbon's most famous tram route through Graça, Alfama, and the historic center — go early to get a seat.", "Eléctrico 28", 0, "Campo de Ourique, Lisboa", 38.7148, -9.1578),
+          templateActivity("Livraria Bertrand Chiado", "Walk", "World's oldest operating bookshop — browse in peace and pick up a Portuguese novel.", "Livraria Bertrand", 0, "Rua Garrett 73, 1200-203 Lisboa", 38.71, -9.1413),
+          templateActivity("A Cevicheria lunch", "Restaurant", "Best ceviche in Lisbon; compact and always busy — arrive at noon when it opens.", "A Cevicheria", 35, "Rua Dom Pedro V 129, 1250-094 Lisboa", 38.7145, -9.1485),
+          templateActivity("Pavilhão Chinês bar", "Nightlife", "Eccentric bar packed floor-to-ceiling with antiques and curiosities; arrive before midnight for a quieter drink.", "Pavilhão Chinês", 15, "Rua Dom Pedro V 89, 1250-093 Lisboa", 38.7141, -9.148),
+        ],
+      },
+    ];
+  }
+
+  if (isBarcelona(destination)) {
+    return [
+      {
+        title: "Gothic Quarter, Born, and La Barceloneta",
+        summary: "Medieval lanes, the best pintxos bar in Born, and a beach sunset.",
+        theme: "History, food, beach",
+        activities: [
+          templateActivity("La Boqueria market breakfast", "Food", "Barcelona's famous covered market on La Rambla — arrive by 9 AM before the crowds and buy fruit, jamón, and coffee.", "Mercat de la Boqueria", 15, "La Rambla, 91, 08001 Barcelona", 41.3817, 2.1715),
+          templateActivity("Barri Gòtic and Plaça Reial", "Walk", "Wander Roman ruins, Gothic cathedrals, and the columned square at the heart of the old city.", "Barri Gòtic", 0, "Plaça Reial, 08002 Barcelona", 41.3793, 2.1751),
+          templateActivity("El Xampanyet cava bar", "Nightlife", "Classic cava bar in El Born open since 1929; arrive at 7 PM for house cava and anchovies.", "El Xampanyet", 20, "Carrer de Montcada 22, 08003 Barcelona", 41.3841, 2.181),
+          templateActivity("La Barceloneta beach sunset", "Viewpoint", "Walk the seafront promenade and watch the sun drop into the Mediterranean. Best from the W Hotel jetty.", "La Barceloneta", 0, "La Barceloneta, 08003 Barcelona", 41.3765, 2.1894),
+        ],
+      },
+      {
+        title: "Gaudí, Gràcia, and rooftop cocktails",
+        summary: "The Sagrada Família, a neighborhood park, and the most beautiful rooftop in the city.",
+        theme: "Architecture, neighborhoods, views",
+        activities: [
+          templateActivity("Sagrada Família", "Landmark", "Gaudí's unfinished basilica — book the tower entry online weeks ahead for the full experience.", "Sagrada Família", 26, "Carrer de Mallorca 401, 08013 Barcelona", 41.4036, 2.1744),
+          templateActivity("Park Güell", "Landmark", "Gaudí's colorful hilltop park; timed entry for the Monumental Zone is required — book early.", "Park Güell", 10, "08024 Barcelona", 41.4145, 2.1527),
+          templateActivity("Gràcia neighborhood walk", "Walk", "A village within the city: independent boutiques, lived-in plazas, and weekend market stalls.", "Gràcia", 0, "Gràcia, 08012 Barcelona", 41.4024, 2.1574),
+          templateActivity("Bar Calders or Bodega Sepúlveda vermouth", "Food", "Catalan vermouth tradition: olives, chips, and a glass of vermut on a sun-drenched terrace.", "Bar Calders", 12, "Carrer del Parlament 25, 08015 Barcelona", 41.3767, 2.1619),
+        ],
+      },
+      {
+        title: "Eixample, Palau de la Música, and a final dinner",
+        summary: "Modernista architecture, a concert hall UNESCO site, and Barcelona's best paella.",
+        theme: "Music, architecture, food",
+        activities: [
+          templateActivity("Palau de la Música Catalana tour or concert", "Museum", "Lluís Domènech i Montaner's stained-glass masterpiece; guided tours or evening concerts — book ahead.", "Palau de la Música Catalana", 20, "Carrer Palau de la Música 4-6, 08003 Barcelona", 41.3876, 2.175),
+          templateActivity("Casa Batlló or Casa Milà (La Pedrera)", "Landmark", "Choose one Gaudí apartment building — Casa Batlló for drama, La Pedrera for the rooftop.", "Casa Batlló", 35, "Passeig de Gràcia 43, 08007 Barcelona", 41.3916, 2.165),
+          templateActivity("Cervecería Catalana brunch", "Cafe", "Busy but excellent brunch spot on Carrer Mallorca with fresh-made pintxos and eggs every style.", "Cervecería Catalana", 22, "Carrer de Mallorca 236, 08008 Barcelona", 41.3914, 2.1601),
+          templateActivity("Kaiku or La Mar Salada paella dinner", "Restaurant", "Seafood paella with a view of the port; reserve La Mar Salada well ahead for the traditional version.", "La Mar Salada", 55, "Passeig de Joan de Borbó 58, 08003 Barcelona", 41.378, 2.1876),
+        ],
+      },
+    ];
+  }
+
+  if (isRome(destination)) {
+    return [
+      {
+        title: "Vatican, Trastevere, and a Roman sunset",
+        summary: "The world's most important museum complex, then a neighborhood dinner in Rome's most atmospheric quarter.",
+        theme: "History, art, neighborhood",
+        activities: [
+          templateActivity("Vatican Museums and Sistine Chapel", "Museum", "Book skip-the-line timed entry online — go first thing. The Gallery of Maps and Raphael Rooms are the hidden highlights.", "Vatican Museums", 22, "Viale Vaticano, 00165 Roma", 41.9065, 12.4534),
+          templateActivity("St. Peter's Basilica and dome", "Landmark", "Free entry to the basilica; pay to climb the dome for the best rooftop view in Rome.", "St. Peter's Basilica", 8, "Piazza San Pietro, 00120 Città del Vaticano", 41.9022, 12.4539),
+          templateActivity("Campo de' Fiori aperitivo", "Food", "Lively square for Aperol spritz and cicchetti before crossing the river for dinner.", "Campo de' Fiori", 15, "Campo de' Fiori, 00186 Roma", 41.8955, 12.4722),
+          templateActivity("Da Enzo al 29 dinner in Trastevere", "Restaurant", "Classic Roman trattoria — cacio e pepe, coda alla vaccinara, and house wine. Book ahead or queue.", "Da Enzo al 29", 40, "Via dei Vascellari 29, 00153 Roma", 41.8876, 12.4684),
+        ],
+      },
+      {
+        title: "Ancient Rome, Piazza Navona, and the Pantheon",
+        summary: "Colosseum and Forum in the morning, then baroque fountains and an afternoon espresso ritual.",
+        theme: "Ancient history, baroque Rome",
+        activities: [
+          templateActivity("Colosseum and Roman Forum", "Landmark", "Buy timed-entry tickets weeks ahead and include the Forum and Palatine Hill — budget half a day.", "Colosseum", 16, "Piazza del Colosseo 1, 00184 Roma", 41.8902, 12.4922),
+          templateActivity("Capitoline Museums", "Museum", "The world's oldest public museum, with Marcus Aurelius's original bronze statue and views over the Forum from the terrace.", "Musei Capitolini", 15, "Piazza del Campidoglio 1, 00186 Roma", 41.8932, 12.4828),
+          templateActivity("Pantheon and Sant'Eustachio il Caffè", "Landmark", "Free entry to the ancient temple; then walk 200 metres for what many call Rome's finest espresso.", "Pantheon", 5, "Piazza della Rotonda, 00186 Roma", 41.8986, 12.4769),
+          templateActivity("Piazza Navona and Supplì Roma", "Walk", "Bernini's fountains at the baroque showpiece square, then a crispy supplì rice croquette around the corner.", "Piazza Navona", 0, "Piazza Navona, 00186 Roma", 41.899, 12.4731),
+        ],
+      },
+      {
+        title: "Borghese, Trevi Fountain, and a final aperitivo",
+        summary: "A gallery surrounded by a park, the most famous fountain in the world, and a rooftop Negroni.",
+        theme: "Art, icons, evening",
+        activities: [
+          templateActivity("Galleria Borghese", "Museum", "Bernini sculptures and Caravaggio paintings in a Baroque villa — reservations required, max 2 hours per slot.", "Galleria Borghese", 15, "Piazzale Scipione Borghese 5, 00197 Roma", 41.9142, 12.4922),
+          templateActivity("Trevi Fountain early morning", "Landmark", "Go before 8 AM to see it without the crowds — the fountain is lit at night but sunrise is the quietest time.", "Fontana di Trevi", 0, "Piazza di Trevi, 00187 Roma", 41.9009, 12.4833),
+          templateActivity("Spanish Steps and Via Condotti", "Walk", "Climb the 135 steps, browse luxury shops on Via Condotti, and pick up a gelato at Della Palma or Giolitti.", "Scalinata di Trinità dei Monti", 0, "Piazza di Spagna, 00187 Roma", 41.9058, 12.4823),
+          templateActivity("Pigneto neighborhood aperitivo", "Nightlife", "Rome's coolest up-and-coming neighborhood for natural wine bars and a local crowd at aperitivo hour.", "Pigneto", 18, "Via del Pigneto, 00176 Roma", 41.8857, 12.5289),
+        ],
+      },
+    ];
+  }
+
+  if (isBali(destination)) {
+    return [
+      {
+        title: "Ubud: rice terraces, temples, and a cooking class",
+        summary: "Ubud's spiritual heart, Tegallalang's staircase paddies, and a hands-on Balinese cooking lesson.",
+        theme: "Culture, nature, food",
+        activities: [
+          templateActivity("Tirta Empul Temple", "Landmark", "Sacred Hindu water temple with purification springs — arrive by 8 AM before tour groups. Bring a sarong.", "Tirta Empul", 3, "Jl. Tirta, Tampaksiring, Gianyar, Bali 80552", -8.4148, 115.3154),
+          templateActivity("Tegallalang Rice Terraces", "Viewpoint", "Iconic stepped terraces northwest of Ubud — walk the paths through the paddies and pay the small maintenance fee.", "Tegallalang", 0, "Tegallalang, Gianyar, Bali", -8.4316, 115.2789),
+          templateActivity("Locavore or Nusantara lunch", "Restaurant", "Award-winning Indonesian fine dining in Ubud's center; Nusantara (their casual sibling) is easier to book.", "Locavore", 45, "Jl. Dewi Sita No.21, Ubud, Gianyar, Bali", -8.5077, 115.2624),
+          templateActivity("Casa Luna Cooking School", "Museum", "Half-day market-to-table Balinese cooking class — join a group class or book private. Start with a market tour.", "Casa Luna Cooking School", 30, "Jl. Bisma, Ubud, Bali 80571", -8.5054, 115.2607),
+        ],
+      },
+      {
+        title: "Sacred Monkey Forest, Campuhan Ridge, and Seminyak",
+        summary: "A wildlife sanctuary, a misty jungle ridge walk, and Bali's best sunset beach club.",
+        theme: "Nature, wellness, beach",
+        activities: [
+          templateActivity("Sacred Monkey Forest Sanctuary", "Nature", "Ancient temple complex inhabited by 700+ macaques — hold your bags tight and avoid direct eye contact.", "Sacred Monkey Forest", 8, "Jl. Monkey Forest, Ubud, Bali 80571", -8.5187, 115.2621),
+          templateActivity("Campuhan Ridge Walk", "Walk", "2 km jungle ridge trail through rice paddies and jungle canopy — coolest and quietest before 8 AM.", "Campuhan Ridge Walk", 0, "Campuhan, Ubud, Bali", -8.4991, 115.2567),
+          templateActivity("Tanah Lot Temple at sunset", "Landmark", "Sea temple on a dramatic offshore rock — arrive 90 minutes before sunset to secure a good viewpoint.", "Tanah Lot", 5, "Beraban, Kediri, Tabanan Regency, Bali", -8.6215, 115.0866),
+          templateActivity("Ku De Ta or Potato Head beach club", "Nightlife", "Seminyak's landmark sunset beach clubs — Potato Head has the pool and DJ, Ku De Ta for the view. Arrive at 5 PM.", "Potato Head Beach Club", 25, "Jl. Petitenget No.51B, Seminyak, Badung, Bali", -8.6841, 115.1603),
+        ],
+      },
+      {
+        title: "Uluwatu, Nusa Dua, and a Kecak fire dance",
+        summary: "A clifftop temple, snorkeling at a hidden beach, and Bali's most spectacular sunset performance.",
+        theme: "Temples, ocean, culture",
+        activities: [
+          templateActivity("Uluwatu Temple and cliffs", "Landmark", "Clifftop temple 70 meters above the Indian Ocean — bring a sarong and go late afternoon for the Kecak show.", "Pura Luhur Uluwatu", 3, "Jl. Raya Uluwatu, Pecatu, Kuta Sel., Badung, Bali", -8.8293, 115.0849),
+          templateActivity("Kecak fire dance at Uluwatu", "Nightlife", "Spectacular Balinese fire dance performed on an ocean-view stage at sunset. Tickets from the temple entrance.", "Kecak Dance Uluwatu", 10, "Pura Luhur Uluwatu, Bali", -8.8293, 115.0849),
+          templateActivity("Warung Ibu Oka or Bebek Tepi Sawah lunch", "Restaurant", "Ibu Oka for legendary Balinese suckling pig (babi guling) — arrive before noon when it sells out.", "Warung Ibu Oka", 8, "Jl. Suweta No.2, Ubud, Gianyar, Bali", -8.5059, 115.2623),
+          templateActivity("Blue Point or Single Fin for a final drink", "Nightlife", "Clifftop bars at Uluwatu with Indian Ocean views — Single Fin for Sunday Sessions or Blue Point for the quieter deck.", "Single Fin Bali", 15, "Jl. Mamo, Uluwatu, Pecatu, Kuta Sel., Badung, Bali", -8.8318, 115.0881),
+        ],
+      },
+    ];
+  }
+
+  // Generic fallback for all other destinations — still uses real activity patterns, not placeholders
+  const dest = destination;
   return [
     {
-      title: "Arrival and neighborhood orientation",
-      summary: `Start in ${destination} with a real landmark, an easy walk, and a local dinner area.`,
-      theme: "Arrival, orientation, food",
+      title: `Arrival and first impressions`,
+      summary: `Orient yourself in ${dest} with the city's iconic landmark, a neighborhood walk, and a local dinner.`,
+      theme: "Arrival, sightseeing, food",
       activities: [
-        templateActivity(`${destination} old town arrival walk`, "Walk", `Begin with a compact old-town route in ${destination}; replace this with a saved place once you pick your base.`, `${destination} old town`, 0),
-        templateActivity(`${destination} city museum`, "Museum", "Use this as a named cultural anchor and verify current exhibits before booking.", `${destination} city museum`, 18),
-        templateActivity(`${destination} neighborhood dinner`, "Restaurant", "Choose a restaurant in the same neighborhood to keep the first night easy.", `${destination} neighborhood dinner`, 35),
+        templateActivity(`Main historic district walking tour`, "Walk", `Start with a self-guided walk through ${dest}'s historic center — check if a free walking tour departs from the main square.`, `${dest} historic center`, 0),
+        templateActivity(`National or city museum`, "Museum", `Visit ${dest}'s most important cultural museum to build context for the rest of the trip. Book tickets online.`, `${dest} national museum`, 18),
+        templateActivity(`Local market or food hall lunch`, "Food", `Eat where locals eat — find the nearest covered market or food hall for lunch with a seasonal, regional menu.`, `${dest} central market`, 20),
+        templateActivity(`Neighborhood dinner`, "Restaurant", `Choose a restaurant in the neighborhood where you're staying for an easy first evening. Ask your accommodation for a recommendation.`, `${dest} restaurant`, 40),
       ],
     },
     {
-      title: "Culture, food, and viewpoints",
-      summary: "A fuller day with a specific cultural stop, local food, and a scenic finish.",
-      theme: "Culture, food, views",
+      title: `Culture, architecture, and a scenic viewpoint`,
+      summary: `A focused culture day: one major site, one viewpoint, and a memorable meal.`,
+      theme: "Culture, views, food",
       activities: [
-        templateActivity(`${destination} signature museum`, "Museum", "Choose the city's best-fit museum for your interests.", `${destination} signature museum`, 25),
-        templateActivity(`${destination} market or cafe district`, "Food", "Build lunch around a market, cafe street, or casual local favorite.", `${destination} market district`, 25),
-        templateActivity(`${destination} sunset viewpoint`, "Viewpoint", "End with a viewpoint and keep dinner nearby to reduce transit.", `${destination} viewpoint`, 0),
+        templateActivity(`Key historical landmark`, "Landmark", `${dest}'s most iconic landmark — book timed entry online if possible and go early to beat the crowds.`, `${dest} landmark`, 15),
+        templateActivity(`Panoramic viewpoint`, "Viewpoint", `Find the city's best viewpoint for skyline or landscape photos — usually best at golden hour.`, `${dest} viewpoint`, 0),
+        templateActivity(`Traditional lunch`, "Restaurant", `Try the regional specialty at a local restaurant well-reviewed by residents, not tourists.`, `${dest} traditional restaurant`, 30),
+        templateActivity(`Evening cultural activity`, "Nightlife", `Theatre, live music, a food tour, or an evening boat cruise — check local listings and book ahead.`, `${dest} evening`, 35),
       ],
     },
     {
-      title: "Local neighborhoods and flexible finds",
-      summary: "A slower day for neighborhoods, shopping, parks, and an easy evening.",
-      theme: "Neighborhoods, parks, flexible time",
+      title: `Local neighborhoods and a relaxed farewell`,
+      summary: `A slower, exploratory day through the city's most characterful neighborhoods.`,
+      theme: "Neighborhoods, shopping, food",
       activities: [
-        templateActivity(`${destination} creative neighborhood`, "Neighborhood", "Explore boutiques, cafes, and side streets.", `${destination} creative neighborhood`, 15),
-        templateActivity(`${destination} park or waterfront`, "Nature", "Add a calmer outdoor break between busier stops.", `${destination} park`, 0),
-        templateActivity(`${destination} memorable dinner`, "Food", "Choose a specific restaurant after checking hours and reservations.", `${destination} restaurant area`, 50),
+        templateActivity(`Residential neighborhood walk`, "Walk", `Explore the neighborhood locals actually live in — look for street art, independent cafés, and a weekend market.`, `${dest} residential area`, 0),
+        templateActivity(`Specialty coffee or tea stop`, "Cafe", `Find the best independent café in the area — ask your accommodation or search locally reviewed spots.`, `${dest} café`, 8),
+        templateActivity(`Local craft or design shopping`, "Shopping", `Browse independent boutiques for locally made food, ceramics, textiles, or design objects to bring home.`, `${dest} shopping`, 20),
+        templateActivity(`Farewell dinner`, "Restaurant", `Reserve the meal you've been looking forward to all trip — the restaurant you researched before leaving.`, `${dest} dinner`, 60),
       ],
     },
   ];
@@ -524,6 +771,26 @@ function titleCase(value: string) {
 
 function isNewYork(destination: string) {
   return /new york|nyc|manhattan/i.test(destination);
+}
+
+function isParis(destination: string) {
+  return /paris/i.test(destination);
+}
+
+function isLisbon(destination: string) {
+  return /lisbon|lisboa/i.test(destination);
+}
+
+function isBarcelona(destination: string) {
+  return /barcelona/i.test(destination);
+}
+
+function isRome(destination: string) {
+  return /rome|roma/i.test(destination);
+}
+
+function isBali(destination: string) {
+  return /bali|ubud|seminyak|uluwatu/i.test(destination);
 }
 
 function slug(value: string) {

@@ -1,6 +1,6 @@
 import { convertToModelMessages, streamText, UIMessage } from "ai";
 import { openai } from "@ai-sdk/openai";
-import { systemPrompt } from "@/lib/ai";
+import { buildSystemPromptWithTrip } from "@/lib/ai";
 
 export const runtime = "nodejs";
 
@@ -16,13 +16,16 @@ export async function POST(req: Request) {
     return new Response("No messages provided", { status: 400 });
   }
 
+  // tripContext is the current trip JSON sent from the client with each message
+  const tripContext: string | null = typeof json?.tripContext === "string" ? json.tripContext : null;
+  const system = buildSystemPromptWithTrip(tripContext);
+
   const modelMessages = await convertToModelMessages(messages);
 
   const result = await streamText({
     model: openai.chat("gpt-4o"),
-    system: systemPrompt,
+    system,
     messages: modelMessages,
-    // No tools — GPT-4o returns structured JSON via the prompt
   });
 
   return result.toUIMessageStreamResponse();
