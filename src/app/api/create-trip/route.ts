@@ -4,6 +4,7 @@ import { z } from "zod";
 import { MAX_TRIP_PROMPT_LENGTH } from "@/lib/trip-limits";
 import { buildMockTrip } from "@/lib/trip-schema";
 import { saveServerTrip } from "@/lib/server-trip-store";
+import { getSupabaseServiceClient } from "@/lib/supabase/server";
 
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 5;
@@ -40,5 +41,17 @@ export async function POST(req: Request) {
   const id = nanoid(8);
   const trip = buildMockTrip(parsed.data.query, id);
   saveServerTrip(trip);
+  const supabase = getSupabaseServiceClient();
+  if (supabase) {
+    const { error } = await supabase.from("trips").insert({
+      id: crypto.randomUUID(),
+      public_id: id,
+      spec: trip,
+      status: "draft",
+    });
+    if (error) {
+      console.warn("create_trip_persist_failed", error.message);
+    }
+  }
   return NextResponse.json({ id, trip });
 }
