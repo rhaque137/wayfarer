@@ -111,9 +111,12 @@ export default function TripChatPage() {
 
   useEffect(() => {
     if (!routeTripId) return;
+    let cancelled = false;
     if (trip?.id === routeTripId && trip.days?.length) {
       setIsHydratingTrip(false);
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
 
     const stored = loadLocalTripRecord(routeTripId);
@@ -121,7 +124,9 @@ export default function TripChatPage() {
       if (stored.status === "complete" && stored.days.length > 0) {
         setTrip(stored);
         setIsHydratingTrip(false);
-        return;
+        return () => {
+          cancelled = true;
+        };
       }
       if (stored.status === "generating" || !stored.days.length) {
         setGeneratingPrompt(stored.sourcePrompt);
@@ -133,8 +138,45 @@ export default function TripChatPage() {
           setGeneratingPrompt(null);
           setIsHydratingTrip(false);
         }, 450);
-        return;
+        return () => {
+          cancelled = true;
+        };
       }
+    }
+
+    if (!queryPrompt) {
+      setIsHydratingTrip(true);
+      fetch(`/api/trips/${encodeURIComponent(routeTripId)}`)
+        .then((response) => (response.ok ? response.json() : null))
+        .then((data) => {
+          if (cancelled) return;
+          if (data?.trip?.id === routeTripId) {
+            const record = toLocalTripRecord(data.trip as Trip);
+            saveLocalTripRecord(record);
+            setLastQuery(record.sourcePrompt);
+            setTrip(record);
+            setIsHydratingTrip(false);
+            return;
+          }
+          console.warn("trip_route_cache_miss", {
+            routeTripId,
+            loadedTripId: trip?.id,
+            hasQueryPrompt: false,
+          });
+          setIsHydratingTrip(false);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          console.warn("trip_route_cache_miss", {
+            routeTripId,
+            loadedTripId: trip?.id,
+            hasQueryPrompt: false,
+          });
+          setIsHydratingTrip(false);
+        });
+      return () => {
+        cancelled = true;
+      };
     }
 
     if (queryPrompt) {
@@ -153,12 +195,9 @@ export default function TripChatPage() {
       return;
     }
 
-    console.warn("trip_route_cache_miss", {
-      routeTripId,
-      loadedTripId: trip?.id,
-      hasQueryPrompt: Boolean(queryPrompt),
-    });
-    setIsHydratingTrip(false);
+    return () => {
+      cancelled = true;
+    };
   }, [routeTripId, trip?.id, trip?.days?.length, queryPrompt, setTrip, setLastQuery, from]);
 
   useEffect(() => {
@@ -303,7 +342,7 @@ export default function TripChatPage() {
             </button>
             <div className="min-w-0">
               <div className="hidden items-center gap-2 text-xs text-neutral-500 md:flex">
-                <Link href="/" className="font-semibold text-[#E8472A] hover:underline">Wayfarer</Link>
+                <Link href="/try" className="font-semibold text-[#E8472A] hover:underline">Wayfarer</Link>
                 <span>/</span>
                 <Link href="/trips" className="hover:text-neutral-900">Trips</Link>
               </div>

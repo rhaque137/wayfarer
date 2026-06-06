@@ -26,7 +26,7 @@ export function ItineraryPlaceCard({ activity, index, destination, pinColor }: P
   const isExpanded = expanded || isActive;
   const isSaved = savedActivities.some((saved) => saved.id === activity.id);
   const hasCoords = activity.lat != null && activity.lng != null;
-  const photoUrl = getActivityPhotoUrl(activity, destination);
+  const photoUrl = getActivityPhotoUrl(activity, destination) ?? null;
 
   const mapsUrl = useMemo(() => {
     if (hasCoords) {

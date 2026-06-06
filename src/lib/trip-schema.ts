@@ -3,6 +3,7 @@ import { withActivityPhoto } from "@/lib/activity-media";
 
 export const activitySchema = z.object({
   id: z.string().min(1),
+  placeId: z.string().optional(),
   title: z.string().min(1).optional(),
   name: z.string().min(1),
   category: z.string().min(1).default("Activity"),
@@ -97,6 +98,19 @@ export type TravelLeg = z.infer<typeof travelLegSchema>;
 export type Trip = z.infer<typeof tripSchema>;
 export type AITripResponse = z.infer<typeof aiTripResponseSchema>;
 
+export const GENERIC_PLACE_PATTERNS = [
+  /^.+ central landmark$/i,
+  /^.+ historic quarter walk$/i,
+  /^.+ local food district$/i,
+  /^central landmark$/i,
+  /^historic quarter$/i,
+  /^food district$/i,
+  /^restaurant cluster$/i,
+  /^photo stop$/i,
+  /^orientation walk$/i,
+  /^check-?in at hotel$/i,
+];
+
 const destinationDefaults: Record<string, { lat: number; lng: number; address: string }> = {
   lisbon: { lat: 38.7223, lng: -9.1393, address: "Lisbon, Portugal" },
   kyoto: { lat: 35.0116, lng: 135.7681, address: "Kyoto, Japan" },
@@ -187,14 +201,15 @@ function buildFallbackDays(
       activities: template.activities.map((activity, actIdx) =>
         withActivityPhoto({
           id: `act-${dayNumber}-${actIdx + 1}`,
+          placeId: slug(activity.locationName),
           title: activity.title,
           name: activity.title,
           category: activity.category,
           description: activity.description,
           locationName: activity.locationName,
-          address: defaults.address,
-          lat: defaults.lat + (idx * 0.012) + (actIdx * 0.006),
-          lng: defaults.lng + (idx * -0.01) + (actIdx * 0.007),
+          address: activity.address ?? defaults.address,
+          lat: activity.lat ?? defaults.lat + (idx * 0.012) + (actIdx * 0.006),
+          lng: activity.lng ?? defaults.lng + (idx * -0.01) + (actIdx * 0.007),
           estimatedCost: activity.estimatedCost,
           currency: "USD",
           confidence: 0.72,
@@ -262,6 +277,54 @@ function getDestinationTemplates(destination: string) {
       },
     ];
   }
+  if (isNewYork(destination)) {
+    return [
+      {
+        title: "West Village, icons, and downtown food",
+        summary: "A walkable Manhattan day with a neighborhood meal, an elevated park, and classic downtown energy.",
+        theme: "Food, icons, neighborhoods",
+        activities: [
+          templateActivity("Buvette West Village breakfast", "Cafe", "Start with a specific West Village favorite before wandering nearby side streets.", "Buvette", 32, "42 Grove St, New York, NY 10014", 40.7327, -74.0042),
+          templateActivity("The High Line and Chelsea Market", "Walk", "Walk the elevated park, then use Chelsea Market for snacks or a casual lunch.", "The High Line", 25, "New York, NY 10011", 40.7479, -74.0048),
+          templateActivity("Tenement Museum", "Museum", "Book a timed tour for a grounded Lower East Side history stop.", "Tenement Museum", 30, "103 Orchard St, New York, NY 10002", 40.7188, -73.9901),
+          templateActivity("Katz's Delicatessen dinner", "Restaurant", "Share pastrami and keep the evening flexible around the Lower East Side.", "Katz's Delicatessen", 35, "205 E Houston St, New York, NY 10002", 40.7223, -73.9874),
+        ],
+      },
+      {
+        title: "Brooklyn views and downtown classics",
+        summary: "Pair Brooklyn waterfront views with a classic bridge walk and dinner back in Nolita.",
+        theme: "Views, walking, dinner",
+        activities: [
+          templateActivity("Dumbo and Brooklyn Bridge Park", "Viewpoint", "Start by the waterfront for skyline photos and an easy coffee stop.", "Brooklyn Bridge Park", 0, "Brooklyn Bridge Park, Brooklyn, NY", 40.7003, -73.9967),
+          templateActivity("Brooklyn Bridge walk", "Walk", "Walk toward Manhattan for the best skyline reveal; go early or late to avoid crowds.", "Brooklyn Bridge", 0, "Brooklyn Bridge, New York, NY", 40.7061, -73.9969),
+          templateActivity("9/11 Memorial pools", "Landmark", "A reflective downtown stop before heading north for dinner.", "9/11 Memorial", 0, "180 Greenwich St, New York, NY 10007", 40.7115, -74.0134),
+          templateActivity("Rubirosa dinner", "Restaurant", "Reserve ahead for thin-crust pizza and Italian-American classics in Nolita.", "Rubirosa", 55, "235 Mulberry St, New York, NY 10012", 40.7227, -73.9961),
+        ],
+      },
+      {
+        title: "Museum Mile and Central Park",
+        summary: "A geographically tight Upper East Side day anchored by The Met and Central Park.",
+        theme: "Museums, park, classic NYC",
+        activities: [
+          templateActivity("The Metropolitan Museum of Art", "Museum", "Pick two wings instead of trying to see everything; verify ticket policies before visiting.", "The Metropolitan Museum of Art", 30, "1000 5th Ave, New York, NY 10028", 40.7794, -73.9632),
+          templateActivity("Central Park Bethesda Terrace", "Landmark", "Walk through the park to the arcade, fountain, and lake viewpoints.", "Bethesda Terrace", 0, "Bethesda Terrace, New York, NY 10024", 40.7741, -73.9708),
+          templateActivity("Levain Bakery Upper West Side", "Cafe", "Add a cookie-and-coffee pause after the park walk.", "Levain Bakery", 12, "167 W 74th St, New York, NY 10023", 40.7799, -73.9803),
+          templateActivity("Comedy Cellar evening show", "Nightlife", "Book a show in advance and check the minimum spend policy.", "Comedy Cellar", 35, "117 MacDougal St, New York, NY 10012", 40.7301, -74.0006),
+        ],
+      },
+      {
+        title: "Midtown landmarks and final favorites",
+        summary: "Keep the last day focused around Midtown so transit stays simple before departure.",
+        theme: "Architecture, shopping, final meal",
+        activities: [
+          templateActivity("Bryant Park and New York Public Library", "Landmark", "See the Rose Main Reading Room if access is available, then pause in Bryant Park.", "New York Public Library", 0, "476 5th Ave, New York, NY 10018", 40.7532, -73.9822),
+          templateActivity("Grand Central Terminal", "Landmark", "Use the main concourse and market as a compact architecture and snack stop.", "Grand Central Terminal", 0, "89 E 42nd St, New York, NY 10017", 40.7527, -73.9772),
+          templateActivity("MoMA", "Museum", "Choose a focused modern-art visit close to Fifth Avenue and Rockefeller Center.", "The Museum of Modern Art", 25, "11 W 53rd St, New York, NY 10019", 40.7614, -73.9776),
+          templateActivity("Xi'an Famous Foods Midtown", "Restaurant", "Finish with a fast, specific, budget-friendly meal near Midtown.", "Xi'an Famous Foods", 18, "24 W 45th St, New York, NY 10036", 40.7564, -73.9807),
+        ],
+      },
+    ];
+  }
 
   return [
     {
@@ -269,9 +332,9 @@ function getDestinationTemplates(destination: string) {
       summary: `Start in ${destination} with a real landmark, an easy walk, and a local dinner area.`,
       theme: "Arrival, orientation, food",
       activities: [
-        templateActivity(`${destination} central landmark`, "Landmark", `Begin at a central, easy-to-find landmark in ${destination}.`, `${destination} central landmark`, 0),
-        templateActivity(`${destination} historic quarter walk`, "Walking", "Use this as a flexible orientation route with coffee and photo stops.", `${destination} historic quarter`, 10),
-        templateActivity(`${destination} local food district`, "Food", "Pick a well-reviewed restaurant cluster near your base.", `${destination} food district`, 40),
+        templateActivity(`${destination} old town arrival walk`, "Walk", `Begin with a compact old-town route in ${destination}; replace this with a saved place once you pick your base.`, `${destination} old town`, 0),
+        templateActivity(`${destination} city museum`, "Museum", "Use this as a named cultural anchor and verify current exhibits before booking.", `${destination} city museum`, 18),
+        templateActivity(`${destination} neighborhood dinner`, "Restaurant", "Choose a restaurant in the same neighborhood to keep the first night easy.", `${destination} neighborhood dinner`, 35),
       ],
     },
     {
@@ -303,8 +366,11 @@ function templateActivity(
   description: string,
   locationName: string,
   estimatedCost: number,
+  address?: string,
+  lat?: number,
+  lng?: number,
 ) {
-  return { title, category, description, locationName, estimatedCost };
+  return { title, category, description, locationName, estimatedCost, address, lat, lng };
 }
 
 export function normalizeTrip(input: unknown, fallbackPrompt = "Trip plan", fallbackId?: string): Trip {
@@ -331,7 +397,7 @@ export function normalizeTrip(input: unknown, fallbackPrompt = "Trip plan", fall
     const rawDay = (rawDays[idx] ?? {}) as { [key: string]: unknown };
     const rawActivities = Array.isArray(rawDay.activities) ? rawDay.activities : [];
     const fallbackDay = fallback.days[idx] ?? fallback.days[fallback.days.length - 1];
-    const useFallbackActivities = !rawActivities.length || activitiesLookGeneric(rawActivities);
+    const useFallbackActivities = !rawActivities.length || activitiesLookGeneric(rawActivities) || rawActivities.some(activityLooksGeneric);
     return {
       id: stringOr(rawDay.id, `day${idx + 1}`),
       dayNumber: Number(rawDay.dayNumber ?? idx + 1),
@@ -389,13 +455,23 @@ function activitiesLookGeneric(activities: unknown[]) {
     const raw = (activity ?? {}) as { title?: unknown; name?: unknown; locationName?: unknown };
     return `${raw.title ?? ""} ${raw.name ?? ""} ${raw.locationName ?? ""}`.toLowerCase();
   });
-  return titles.length > 0 && titles.filter((title) => genericTerms.some((term) => title.includes(term))).length >= Math.ceil(titles.length / 2);
+  return titles.length > 0 && titles.filter((title) => isGenericPlaceTitle(title) || genericTerms.some((term) => title.includes(term))).length >= Math.ceil(titles.length / 2);
+}
+
+export function isGenericPlaceTitle(title: string) {
+  return GENERIC_PLACE_PATTERNS.some((pattern) => pattern.test(title.trim()));
+}
+
+function activityLooksGeneric(activity: unknown) {
+  const raw = (activity ?? {}) as { title?: unknown; name?: unknown; locationName?: unknown };
+  return [raw.title, raw.name, raw.locationName].some((value) => typeof value === "string" && isGenericPlaceTitle(value));
 }
 
 function normalizeActivity(input: unknown, dayIdx: number, actIdx: number): Activity {
   const raw = (input ?? {}) as { [key: string]: unknown };
   return activitySchema.parse({
     id: stringOr(raw.id, `act-${dayIdx + 1}-${actIdx + 1}`),
+    placeId: optionalString(raw.placeId),
     title: stringOr(raw.title ?? raw.name, `Activity ${actIdx + 1}`),
     name: stringOr(raw.name ?? raw.title, `Activity ${actIdx + 1}`),
     category: stringOr(raw.category, "Activity"),
@@ -444,4 +520,12 @@ function clampDays(value: number) {
 
 function titleCase(value: string) {
   return value.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function isNewYork(destination: string) {
+  return /new york|nyc|manhattan/i.test(destination);
+}
+
+function slug(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "place";
 }

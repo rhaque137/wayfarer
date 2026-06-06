@@ -93,7 +93,18 @@ export default function Home() {
       });
       const data = await res.json().catch(() => null);
       if (res.ok && data?.id) {
-        const shell = createLocalTripShell(data.id, trimmedQuery);
+        const shell = data.trip
+          ? {
+              ...data.trip,
+              sourcePrompt: trimmedQuery,
+              promptHash: createLocalTripShell(data.id, trimmedQuery).promptHash,
+              status: "complete" as const,
+              visibility: "local" as const,
+              schemaVersion: 2,
+              createdAt: data.trip.createdAt ?? new Date().toISOString(),
+              updatedAt: data.trip.updatedAt ?? new Date().toISOString(),
+            }
+          : createLocalTripShell(data.id, trimmedQuery);
         saveLocalTripRecord(shell);
         router.push(`/trip/${data.id}/chat/main?from=planner`);
         return;

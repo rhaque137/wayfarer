@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { MAX_TRIP_PROMPT_LENGTH } from "@/lib/trip-limits";
+import { buildMockTrip } from "@/lib/trip-schema";
+import { saveServerTrip } from "@/lib/server-trip-store";
 
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 5;
@@ -36,5 +38,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
   const id = nanoid(8);
-  return NextResponse.json({ id });
+  const trip = buildMockTrip(parsed.data.query, id);
+  saveServerTrip(trip);
+  return NextResponse.json({ id, trip });
 }
