@@ -69,8 +69,8 @@ export function ItineraryPanel({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 pb-28 md:pb-4">
-        <div className="sticky top-0 z-20 -mx-4 mb-4 border-b border-neutral-200 bg-[#FAF7F3]/95 px-4 py-2 backdrop-blur">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 pb-[calc(env(safe-area-inset-bottom)+112px)] md:pb-4">
+        <div className="-mx-4 mb-4 border-b border-neutral-200 bg-[#FAF7F3] px-4 py-2 shadow-[0_1px_0_rgba(0,0,0,0.03)] md:sticky md:top-0 md:z-20">
           <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {trip.days.map((day) => {
               const selected = (selectedDayId ?? trip.days[0]?.id) === day.id;

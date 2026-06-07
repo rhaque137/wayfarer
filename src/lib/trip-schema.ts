@@ -158,7 +158,7 @@ export function buildMockTrip(prompt: string, id = `local-${Date.now()}`): Trip 
   const defaults = destinationDefaults[destination.toLowerCase()];
   const requestedDays = parseTripLengthDays(prompt) ?? 3;
 
-  return {
+  const trip: Trip = {
     id,
     title: `${destination} Starter Plan`,
     name: `${destination} Starter Plan`,
@@ -183,6 +183,7 @@ export function buildMockTrip(prompt: string, id = `local-${Date.now()}`): Trip 
     ],
     travelLegs: [],
   };
+  return applyPromptConstraints(trip, prompt);
 }
 
 function buildFallbackDays(
@@ -618,6 +619,153 @@ function templateActivity(
   lng?: number,
 ) {
   return { title, category, description, locationName, estimatedCost, address, lat, lng };
+}
+
+function applyPromptConstraints(trip: Trip, prompt: string): Trip {
+  const lower = prompt.toLowerCase();
+  let next = trip;
+  if (/jazz|hidden bar|speakeasy|nightlife/.test(lower)) {
+    next = addNightlifeConstraint(next);
+  }
+  if (/coffee|cafe|café/.test(lower) && /\b(each|every|per)\s+day\b|coffee shops each day/.test(lower)) {
+    next = ensureCoffeeEachDay(next);
+  }
+  if (/family|kid|children/.test(lower)) {
+    next = markFamilyFriendly(next);
+  }
+  return next;
+}
+
+function addNightlifeConstraint(trip: Trip): Trip {
+  const jazzStops = nightlifeSeeds(trip.destination);
+  if (!jazzStops.length) return trip;
+  return {
+    ...trip,
+    summary: `${trip.summary} Includes nightlife-focused evening options from the search prompt.`,
+    days: trip.days.map((day, dayIndex) => {
+      const seed = jazzStops[dayIndex % jazzStops.length];
+      const activity = withActivityPhoto(createActivityFromSeed(seed, day.id, dayIndex, day.activities.length, trip), trip.destination);
+      const replaceIndex = findEveningReplaceIndex(day.activities);
+      const activities =
+        replaceIndex >= 0
+          ? day.activities.map((item, index) => (index === replaceIndex ? activity : item))
+          : [...day.activities, activity];
+      return {
+        ...day,
+        summary: `${day.summary ?? ""} Evening includes a jazz/nightlife stop requested in the prompt.`.trim(),
+        activities,
+      };
+    }),
+  };
+}
+
+function ensureCoffeeEachDay(trip: Trip): Trip {
+  const coffeeStops = coffeeSeeds(trip.destination);
+  if (!coffeeStops.length) return trip;
+  const used = new Set<string>();
+  return {
+    ...trip,
+    days: trip.days.map((day, dayIndex) => {
+      if (day.activities.some((activity) => /coffee|cafe|café/i.test(`${activity.name} ${activity.category}`))) {
+        return day;
+      }
+      const seed = coffeeStops.find((item) => !used.has(item.title)) ?? coffeeStops[dayIndex % coffeeStops.length];
+      used.add(seed.title);
+      const activity = withActivityPhoto(createActivityFromSeed(seed, day.id, dayIndex, 1, trip), trip.destination);
+      const activities = [...day.activities];
+      activities.splice(Math.min(1, activities.length), 0, activity);
+      return {
+        ...day,
+        activities,
+      };
+    }),
+  };
+}
+
+function markFamilyFriendly(trip: Trip): Trip {
+  return {
+    ...trip,
+    days: trip.days.map((day) => ({
+      ...day,
+      summary: `${day.summary ?? ""} Pacing adjusted for family-friendly breaks and flexible timing.`.trim(),
+      activities: day.activities.map((activity) => ({
+        ...activity,
+        notes: `${activity.notes ?? "AI suggestion."} Family-friendly pacing: verify stroller access, restrooms, and ticket rules.`,
+      })),
+    })),
+  };
+}
+
+function createActivityFromSeed(
+  seed: ReturnType<typeof nightlifeSeeds>[number],
+  dayId: string,
+  dayIndex: number,
+  activityIndex: number,
+  trip: Trip,
+): Activity {
+  return {
+    id: `act-${dayId}-${slug(seed.locationName)}-${activityIndex}`,
+    placeId: slug(seed.locationName),
+    title: seed.title,
+    name: seed.title,
+    category: seed.category,
+    description: seed.description,
+    locationName: seed.locationName,
+    address: seed.address,
+    lat: seed.lat,
+    lng: seed.lng,
+    estimatedCost: seed.estimatedCost,
+    currency: trip.budgetCurrency ?? "USD",
+    confidence: 0.72,
+    verificationStatus: "needs_verification",
+    notes: "Added because of your prompt. Verify hours, cover charges, and booking rules before travel.",
+    locked: false,
+  };
+}
+
+function findEveningReplaceIndex(activities: Activity[]) {
+  const index = activities.findIndex((activity) => /nightlife|dinner|evening|bar|show|fado/i.test(`${activity.name} ${activity.category}`));
+  return index >= 0 ? index : activities.length - 1;
+}
+
+function nightlifeSeeds(destination: string) {
+  if (isParis(destination)) {
+    return [
+      templateActivity("Le Caveau de la Huchette jazz night", "Nightlife", "A historic Latin Quarter jazz cellar; check the set calendar and cover before going.", "Le Caveau de la Huchette", 22, "5 Rue de la Huchette, 75005 Paris, France", 48.8528, 2.3453),
+      templateActivity("Duc des Lombards late set", "Nightlife", "Polished jazz club near Châtelet with ticketed evening sets and strong sightlines.", "Duc des Lombards", 35, "42 Rue des Lombards, 75001 Paris, France", 48.8597, 2.3483),
+      templateActivity("38Riv Jazz Club", "Nightlife", "Small vaulted jazz room in the Marais; reserve ahead for intimate evening shows.", "38Riv Jazz Club", 25, "38 Rue de Rivoli, 75004 Paris, France", 48.8558, 2.3568),
+    ];
+  }
+  if (isNewYork(destination)) {
+    return [
+      templateActivity("Smalls Jazz Club late set", "Nightlife", "Classic Greenwich Village basement jazz club; reserve or arrive early for popular sets.", "Smalls Jazz Club", 30, "183 W 10th St, New York, NY 10014", 40.7344, -74.0028),
+      templateActivity("Dizzy's Club at Jazz at Lincoln Center", "Nightlife", "Room with skyline views and ticketed jazz sets; verify showtimes before booking.", "Dizzy's Club", 45, "10 Columbus Cir, New York, NY 10019", 40.7681, -73.983),
+    ];
+  }
+  return [];
+}
+
+function coffeeSeeds(destination: string) {
+  if (isParis(destination)) {
+    return [
+      templateActivity("Ten Belles coffee", "Cafe", "Specialty coffee stop near Canal Saint-Martin.", "Ten Belles", 8, "10 Rue de la Grange aux Belles, 75010 Paris, France", 48.8717, 2.3634),
+      templateActivity("Coutume Cafe", "Cafe", "Left Bank specialty coffee stop that pairs well with museum days.", "Coutume Cafe", 8, "47 Rue de Babylone, 75007 Paris, France", 48.8509, 2.319),
+      templateActivity("KB CafeShop", "Cafe", "Independent coffee near Pigalle and Montmartre.", "KB CafeShop", 8, "53 Av. Trudaine, 75009 Paris, France", 48.8822, 2.3436),
+    ];
+  }
+  if (isNewYork(destination)) {
+    return [
+      templateActivity("Everyman Espresso", "Cafe", "Downtown espresso bar near SoHo routes.", "Everyman Espresso", 8, "301 W Broadway, New York, NY 10013", 40.7217, -74.0047),
+      templateActivity("Devoción Williamsburg", "Cafe", "Independent Colombian coffee stop near Brooklyn routes.", "Devoción Williamsburg", 8, "69 Grand St, Brooklyn, NY 11249", 40.7168, -73.9655),
+    ];
+  }
+  if (destination.toLowerCase().includes("toronto")) {
+    return [
+      templateActivity("Fahrenheit Coffee Richmond", "Cafe", "Independent espresso bar near the downtown route.", "Fahrenheit Coffee", 7, "120 Lombard St, Toronto, ON M5C 3H5", 43.6519, -79.3728),
+      templateActivity("FIKA Cafe Kensington", "Cafe", "Local cafe that fits naturally into a Kensington day.", "FIKA Cafe", 8, "28 Kensington Ave, Toronto, ON M5T 2J9", 43.6548, -79.4005),
+    ];
+  }
+  return [];
 }
 
 export function normalizeTrip(input: unknown, fallbackPrompt = "Trip plan", fallbackId?: string): Trip {

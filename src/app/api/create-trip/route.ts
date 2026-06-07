@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { MAX_TRIP_PROMPT_LENGTH } from "@/lib/trip-limits";
 import { buildMockTrip } from "@/lib/trip-schema";
-import { saveServerTrip } from "@/lib/server-trip-store";
+import { getServerTrip, saveServerTrip } from "@/lib/server-trip-store";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { createPromptTripId } from "@/lib/trip-route-id";
+import { createTripCacheKey } from "@/lib/trip-cache";
 
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 5;
@@ -12,6 +13,7 @@ const requestCounts = new Map<string, { count: number; resetAt: number }>();
 
 const bodySchema = z.object({
   query: z.string().trim().min(1).max(MAX_TRIP_PROMPT_LENGTH),
+  forceRegenerate: z.boolean().optional(),
 });
 
 export async function POST(req: Request) {
@@ -38,7 +40,23 @@ export async function POST(req: Request) {
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
-  const id = createPromptTripId(parsed.data.query);
+  const cacheKey = createTripCacheKey(parsed.data.query);
+  const baseId = createPromptTripId(parsed.data.query);
+  const id = parsed.data.forceRegenerate ? `trip-${crypto.randomUUID()}` : baseId;
+  const existing = !parsed.data.forceRegenerate ? getServerTrip(id) : null;
+  if (existing) {
+    return NextResponse.json({
+      id,
+      trip: existing,
+      cache: {
+        status: "cached",
+        cacheKey,
+        generatedAt: existing.updatedAt ?? existing.createdAt ?? new Date().toISOString(),
+        source: "curated_seed",
+      },
+    });
+  }
+
   const trip = buildMockTrip(parsed.data.query, id);
   saveServerTrip(trip);
   const supabase = getSupabaseServiceClient();
@@ -53,5 +71,14 @@ export async function POST(req: Request) {
       console.warn("create_trip_persist_failed", error.message);
     }
   }
-  return NextResponse.json({ id, trip });
+  return NextResponse.json({
+    id,
+    trip,
+    cache: {
+      status: parsed.data.forceRegenerate ? "regenerated" : "fresh",
+      cacheKey,
+      generatedAt: trip.updatedAt ?? new Date().toISOString(),
+      source: "curated_seed",
+    },
+  });
 }

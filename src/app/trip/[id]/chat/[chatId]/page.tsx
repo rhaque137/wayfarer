@@ -38,6 +38,7 @@ export default function TripChatPage() {
   const routeTripId = params.id;
   const queryPrompt = searchParams.get("q");
   const from = searchParams.get("from");
+  const cacheStatus = searchParams.get("cache");
   const trip = useTripStore((s) => s.trip);
   const lastQuery = useTripStore((s) => s.lastQuery);
   const updateTrip = useTripStore((s) => s.updateTrip);
@@ -247,6 +248,17 @@ export default function TripChatPage() {
     routeMismatch,
     destinationConflict,
   ]);
+
+  useEffect(() => {
+    if (!cacheStatus || isHydratingTrip || workspaceNotice) return;
+    if (cacheStatus === "cached") {
+      setWorkspaceNotice("Loaded cached itinerary for this exact search. Edit the prompt or start a new plan to regenerate.");
+    } else if (cacheStatus === "regenerated") {
+      setWorkspaceNotice("Generated a fresh itinerary and replaced the cached version for this search.");
+    } else if (cacheStatus === "fresh") {
+      setWorkspaceNotice("Generated a fresh itinerary for this search.");
+    }
+  }, [cacheStatus, isHydratingTrip, workspaceNotice]);
 
   const generateFromPrompt = () => {
     if (!queryPrompt || !routeTripId) return;

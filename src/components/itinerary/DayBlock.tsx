@@ -188,11 +188,6 @@ export function DayBlock({ day, date, theme, activities, dayColorIndex = 0, dayI
           const next = activities[index + 1];
           const key = next ? `${act.id}__${next.id}` : "";
           const info = key ? travelInfo[key] : null;
-          const directionsUrl =
-            act.lat != null && act.lng != null && next?.lat != null && next?.lng != null
-              ? `https://www.google.com/maps/dir/?api=1&origin=${act.lat},${act.lng}&destination=${next.lat},${next.lng}`
-              : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(act.name)}`;
-
           const pinColor = DAY_COLORS[dayColorIndex % DAY_COLORS.length];
           return (
             <li key={act.id} className="space-y-3">
@@ -209,14 +204,6 @@ export function DayBlock({ day, date, theme, activities, dayColorIndex = 0, dayI
                   <div className="flex min-h-8 items-center gap-2 text-xs text-neutral-500">
                     <span aria-hidden="true">→</span>
                     <span>{info ? `${info.time} · ${info.distance}` : "Route time pending"}</span>
-                    <a
-                      href={directionsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-semibold text-[#E8472A] underline"
-                    >
-                      Directions
-                    </a>
                   </div>
                 </div>
               )}

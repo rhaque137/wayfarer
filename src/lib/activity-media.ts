@@ -71,10 +71,18 @@ export function withActivityPhoto<T extends Activity>(activity: T, destination?:
   return activity.photoUrl === photoUrl ? activity : { ...activity, photoUrl };
 }
 
-export function getActivityPhotoCacheKey(destination: string, activity: Pick<Activity, "name" | "category" | "placeId">) {
+export function getActivityPhotoCacheKey(
+  destination: string,
+  activity: Pick<Activity, "name" | "category" | "placeId" | "address" | "lat" | "lng">,
+) {
   return [
+    "photo-v2",
     slug(destination),
     slug((activity as { placeId?: string }).placeId ?? activity.name),
+    slug(activity.address ?? "no-address"),
+    activity.lat != null && activity.lng != null
+      ? `${activity.lat.toFixed(4)},${activity.lng.toFixed(4)}`
+      : "missing-coords",
     normalizeCategory(activity.category),
   ].join(":");
 }

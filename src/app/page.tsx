@@ -84,6 +84,11 @@ export default function Home() {
 
     setIsCreatingTrip(true);
     setCreateTripError(null);
+    console.info("wayfarer_create_trip_submit", {
+      destination: intake.destination.trim(),
+      tripLength: intake.tripLength.trim(),
+      interests: intake.interests,
+    });
 
     try {
       const res = await fetch("/api/create-trip", {
@@ -93,6 +98,11 @@ export default function Home() {
       });
       const data = await res.json().catch(() => null);
       if (res.ok && data?.id) {
+        console.info("wayfarer_create_trip_success", {
+          id: data.id,
+          cacheStatus: data.cache?.status,
+          cacheKey: data.cache?.cacheKey,
+        });
         const shell = data.trip
           ? {
               ...data.trip,
@@ -106,11 +116,14 @@ export default function Home() {
             }
           : createLocalTripShell(data.id, trimmedQuery);
         saveLocalTripRecord(shell);
-        router.push(`/trip/${data.id}/chat/main?from=planner`);
+        const cacheStatus = typeof data.cache?.status === "string" ? data.cache.status : "fresh";
+        router.push(`/trip/${data.id}/chat/main?from=planner&cache=${encodeURIComponent(cacheStatus)}`);
         return;
       }
+      console.warn("wayfarer_create_trip_failed", { status: res.status, data });
       setCreateTripError(CREATE_TRIP_ERROR_MESSAGE);
-    } catch {
+    } catch (error) {
+      console.warn("wayfarer_create_trip_error", error);
       setCreateTripError(CREATE_TRIP_ERROR_MESSAGE);
     } finally {
       setIsCreatingTrip(false);

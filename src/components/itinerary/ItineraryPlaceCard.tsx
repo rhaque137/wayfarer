@@ -129,73 +129,69 @@ export function ItineraryPlaceCard({ activity, index, destination, pinColor }: P
         </div>
 
         {/* Right column: thumbnail + directions */}
-        <div className="flex flex-shrink-0 flex-col items-end gap-2">
+        <div ref={overflowRef} className="relative flex w-[72px] flex-shrink-0 flex-col items-stretch gap-2 md:w-24">
           <ActivityThumbnail name={activity.name} photoUrl={photoUrl} />
           <a
             href={mapsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-full bg-[#F5EAE6] px-3 py-1 text-[11px] font-bold text-[#E8472A] transition-colors hover:bg-[#E8472A] hover:text-white focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15"
+            className="w-full rounded-full bg-[#F5EAE6] px-2 py-1 text-center text-[10px] font-bold text-[#E8472A] transition-colors hover:bg-[#E8472A] hover:text-white focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15 md:text-[11px]"
             onClick={(e) => e.stopPropagation()}
           >
             Directions
           </a>
-        </div>
-      </div>
+          <button
+            type="button"
+            onClick={() => { setShowOverflow((v) => !v); setShowMoveMenu(false); }}
+            className="flex h-8 w-full items-center justify-center rounded-full border border-neutral-200 bg-white text-sm font-bold text-neutral-500 shadow-sm transition-colors hover:border-[#E8472A] hover:text-[#E8472A] focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15"
+            aria-label={`More actions for ${activity.name}`}
+            aria-expanded={showOverflow}
+          >
+            •••
+          </button>
 
-      {/* Overflow menu button */}
-      <div ref={overflowRef} className="absolute right-3 bottom-3">
-        <button
-          type="button"
-          onClick={() => { setShowOverflow((v) => !v); setShowMoveMenu(false); }}
-          className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-200 bg-white text-sm font-bold text-neutral-500 shadow-sm transition-colors hover:border-[#E8472A] hover:text-[#E8472A] focus:outline-none focus:ring-4 focus:ring-[#E8472A]/15"
-          aria-label="More actions"
-          aria-expanded={showOverflow}
-        >
-          •••
-        </button>
-
-        {showOverflow && (
-          <div className="absolute bottom-9 right-0 z-50 min-w-[170px] rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-xl">
-            {!editingNote && (
-              <OverflowItem
-                label="Edit note"
-                onClick={() => { setEditingNote(true); setNoteValue(activity.notes ?? activity.description ?? ""); closeMenus(); }}
-              />
-            )}
-            {otherDays.length > 0 && (
-              <div className="relative">
+          {showOverflow && (
+            <div className="absolute right-0 top-full z-50 mt-2 min-w-[180px] rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-xl">
+              {!editingNote && (
                 <OverflowItem
-                  label="Move to day…"
-                  onClick={() => setShowMoveMenu((v) => !v)}
-                  trailing="›"
+                  label="Edit note"
+                  onClick={() => { setEditingNote(true); setNoteValue(activity.notes ?? activity.description ?? ""); closeMenus(); }}
                 />
-                {showMoveMenu && (
-                  <div className="absolute bottom-0 right-[calc(100%+4px)] z-50 min-w-[140px] rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-xl">
-                    {otherDays.map((d) => (
-                      <OverflowItem
-                        key={d.id}
-                        label={`Day ${d.dayNumber}`}
-                        onClick={() => { moveActivity(activity.id, d.id); closeMenus(); }}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            <OverflowItem
-              label={activity.locked ? "Unlock" : "Lock"}
-              onClick={() => { toggleActivityLock(activity.id); closeMenus(); }}
-            />
-            <div className="my-1 border-t border-neutral-100" />
-            <OverflowItem
-              label="Delete"
-              danger
-              disabled={activity.locked}
-              onClick={() => { removeActivity(activity.id); closeMenus(); }}
-            />
-          </div>
-        )}
+              )}
+              {otherDays.length > 0 && (
+                <div className="relative">
+                  <OverflowItem
+                    label="Move to day…"
+                    onClick={() => setShowMoveMenu((v) => !v)}
+                    trailing="›"
+                  />
+                  {showMoveMenu && (
+                    <div className="absolute bottom-0 right-[calc(100%+4px)] z-50 min-w-[140px] rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-xl">
+                      {otherDays.map((d) => (
+                        <OverflowItem
+                          key={d.id}
+                          label={`Day ${d.dayNumber}`}
+                          onClick={() => { moveActivity(activity.id, d.id); closeMenus(); }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <OverflowItem
+                label={activity.locked ? "Unlock" : "Lock"}
+                onClick={() => { toggleActivityLock(activity.id); closeMenus(); }}
+              />
+              <div className="my-1 border-t border-neutral-100" />
+              <OverflowItem
+                label="Delete"
+                danger
+                disabled={activity.locked}
+                onClick={() => { removeActivity(activity.id); closeMenus(); }}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Inline note editor */}
@@ -263,7 +259,7 @@ function OverflowItem({
 function ActivityThumbnail({ name, photoUrl }: { name: string; photoUrl: string | null }) {
   const [failed, setFailed] = useState(false);
   return (
-    <div className="relative h-[72px] w-[72px] overflow-hidden rounded-xl bg-neutral-100 md:h-[76px] md:w-24">
+    <div className="relative h-[72px] w-full overflow-hidden rounded-xl bg-neutral-100 md:h-[76px]">
       {photoUrl && !failed ? (
         <Image
           src={photoUrl}
