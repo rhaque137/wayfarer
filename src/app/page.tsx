@@ -11,6 +11,7 @@ import { PLACEHOLDER_IMAGE, getDestinationImage } from "@/lib/destination-images
 import { useAuth } from "@/lib/auth/context";
 import { createLocalTripShell, saveLocalTripRecord } from "@/lib/trip-persistence";
 import { CREATE_TRIP_ERROR_MESSAGE, MAX_TRIP_PROMPT_LENGTH } from "@/lib/trip-limits";
+import { useTripStore } from "@/store/tripStore";
 
 const AuthBar = dynamic(() => import("@/components/home/AuthBar").then((mod) => mod.AuthBar), {
   ssr: false,
@@ -65,6 +66,8 @@ export default function Home() {
   const [isCreatingTrip, setIsCreatingTrip] = useState(false);
   const [createTripError, setCreateTripError] = useState<string | null>(null);
   const router = useRouter();
+  const setActiveTrip = useTripStore((s) => s.setTrip);
+  const clearActiveTrip = useTripStore((s) => s.clearTrip);
 
   const submit = async () => {
     const trimmedQuery = buildTripQuery(intake).trim();
@@ -84,6 +87,7 @@ export default function Home() {
 
     setIsCreatingTrip(true);
     setCreateTripError(null);
+    clearActiveTrip();
     console.info("wayfarer_create_trip_submit", {
       destination: intake.destination.trim(),
       tripLength: intake.tripLength.trim(),
@@ -98,6 +102,15 @@ export default function Home() {
       });
       const data = await res.json().catch(() => null);
       if (res.ok && data?.id) {
+        if (data.trip?.destination && !destinationMatches(data.trip.destination, intake.destination)) {
+          console.warn("wayfarer_create_trip_destination_mismatch", {
+            requested: intake.destination,
+            received: data.trip.destination,
+            id: data.id,
+          });
+          setCreateTripError(`Wayfarer generated ${data.trip.destination} instead of ${intake.destination}. Please retry.`);
+          return;
+        }
         console.info("wayfarer_create_trip_success", {
           id: data.id,
           cacheStatus: data.cache?.status,
@@ -116,6 +129,7 @@ export default function Home() {
             }
           : createLocalTripShell(data.id, trimmedQuery);
         saveLocalTripRecord(shell);
+        if (shell.days.length > 0) setActiveTrip(shell);
         const cacheStatus = typeof data.cache?.status === "string" ? data.cache.status : "fresh";
         router.push(`/trip/${data.id}/chat/main?from=planner&cache=${encodeURIComponent(cacheStatus)}`);
         return;
@@ -316,4 +330,17 @@ export default function Home() {
       <HelpWidget />
     </div>
   );
+}
+
+function destinationMatches(received: string, requested: string) {
+  const normalize = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  const left = normalize(received);
+  const right = normalize(requested);
+  if (!left || !right) return true;
+  return left.includes(right) || right.includes(left);
 }

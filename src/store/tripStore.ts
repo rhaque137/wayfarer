@@ -23,6 +23,7 @@ export interface TripStore {
   activeActivityId: string | null;
   lastQuery: string | null;
   setTrip: (trip: Trip) => void;
+  clearTrip: () => void;
   updateTrip: (partial: Partial<Trip>) => void;
   addMessage: (msg: Omit<Message, "id" | "timestamp">) => void;
   setMessages: (msgs: Message[]) => void;
@@ -55,6 +56,7 @@ export const useTripStore = create<TripStore>()(
       lastQuery: null,
 
       setTrip: (trip) => set({ trip: withTripActivityPhotos(trip) }),
+      clearTrip: () => set({ trip: null, pendingAIChanges: false, pendingPatch: null, activeActivityId: null }),
       updateTrip: (partial) =>
         set((state) => (state.trip ? { trip: { ...state.trip, ...partial } } : state)),
       addMessage: (msg) =>
@@ -173,11 +175,8 @@ export const useTripStore = create<TripStore>()(
     {
       name: "wayfarer_trip_store",
       partialize: (state) => ({
-        trip: state.trip,
         messages: state.messages,
         savedActivities: state.savedActivities,
-        pendingAIChanges: state.pendingAIChanges,
-        pendingPatch: state.pendingPatch,
         lastQuery: state.lastQuery,
       }),
     },

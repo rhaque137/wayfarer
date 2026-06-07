@@ -123,6 +123,7 @@ const destinationDefaults: Record<string, { lat: number; lng: number; address: s
   "new york city": { lat: 40.7128, lng: -74.006, address: "New York, NY" },
   nyc: { lat: 40.7128, lng: -74.006, address: "New York, NY" },
   toronto: { lat: 43.6532, lng: -79.3832, address: "Toronto, Ontario, Canada" },
+  madrid: { lat: 40.4168, lng: -3.7038, address: "Madrid, Spain" },
 };
 
 export function parseDestinationFromPrompt(prompt: string) {
@@ -412,6 +413,55 @@ function getDestinationTemplates(destination: string) {
           templateActivity("Harbourfront and Toronto Music Garden", "Walk", "Use the lakefront path for views, public art, and an easy low-cost morning.", "Toronto Music Garden", 0, "479 Queens Quay W, Toronto, ON M5V 2Y3", 43.6369, -79.3947),
           templateActivity("Distillery District", "Shopping", "Brick lanes, galleries, and design shops in a compact pedestrian district.", "Distillery District", 10, "55 Mill St, Toronto, ON M5A 3C4", 43.6503, -79.3596),
           templateActivity("Pai Northern Thai Kitchen dinner", "Restaurant", "A specific downtown dinner pick with strong vegetarian and group options; expect a wait.", "Pai Northern Thai Kitchen", 35, "18 Duncan St, Toronto, ON M5H 3G8", 43.6479, -79.3887),
+        ],
+      },
+    ];
+  }
+
+  if (destination.toLowerCase().includes("madrid")) {
+    return [
+      {
+        title: "Sol, Austrias, and tapas classics",
+        summary: "Start with Madrid's historic core, a market lunch, and a classic tapas evening.",
+        theme: "Historic center, food, plazas",
+        activities: [
+          templateActivity("Puerta del Sol and Plaza Mayor walk", "Walk", "Use Madrid's two central plazas as your orientation point, then wander the Austrias lanes before lunch.", "Puerta del Sol", 0, "Puerta del Sol, Madrid, Spain", 40.4169, -3.7035),
+          templateActivity("Mercado de San Miguel lunch", "Food", "Try a grazing lunch of tortilla, croquetas, olives, and vermouth in Madrid's best-known market hall.", "Mercado de San Miguel", 22, "Pl. de San Miguel, s/n, Centro, 28005 Madrid, Spain", 40.4154, -3.7089),
+          templateActivity("Royal Palace of Madrid", "Landmark", "Book palace tickets ahead if you want the state rooms; the Sabatini Gardens are a good low-cost alternative.", "Royal Palace of Madrid", 16, "C. de Bailen, s/n, 28071 Madrid, Spain", 40.4179, -3.7143),
+          templateActivity("Sobrino de Botin dinner", "Restaurant", "Reserve for Madrid's old-school roast house experience, or use nearby Cava Baja for a more casual tapas crawl.", "Sobrino de Botin", 45, "C. de Cuchilleros, 17, 28005 Madrid, Spain", 40.414, -3.708),
+        ],
+      },
+      {
+        title: "Prado, Retiro, and literary Madrid",
+        summary: "Anchor the day with art, park time, and Barrio de las Letras.",
+        theme: "Museums, park, cafes",
+        activities: [
+          templateActivity("Museo del Prado", "Museum", "Focus on Velazquez, Goya, and Bosch rather than trying to see every room; timed tickets help.", "Museo Nacional del Prado", 15, "C. de Ruiz de Alarcon, 23, 28014 Madrid, Spain", 40.4138, -3.6921),
+          templateActivity("El Retiro Park and Crystal Palace", "Nature", "Walk to the Palacio de Cristal and lake for a calm reset between museum stops.", "El Retiro Park", 0, "Plaza de la Independencia, 7, 28001 Madrid, Spain", 40.4153, -3.6844),
+          templateActivity("Barrio de las Letras cafe stop", "Cafe", "Pause in the literary quarter and keep the afternoon walkable around Huertas and Santa Ana.", "Barrio de las Letras", 10, "Barrio de las Letras, Madrid, Spain", 40.4144, -3.6993),
+          templateActivity("Casa Alberto dinner", "Restaurant", "Classic tavern cooking in the literary quarter; reserve or arrive early for a table.", "Casa Alberto", 38, "C. de las Huertas, 18, 28012 Madrid, Spain", 40.4132, -3.7007),
+        ],
+      },
+      {
+        title: "Malasana, Chueca, and live music",
+        summary: "Independent shops, coffee, nightlife, and modern Madrid.",
+        theme: "Neighborhoods, nightlife, shopping",
+        activities: [
+          templateActivity("Toma Cafe Malasana", "Cafe", "Start with a specialty coffee stop before wandering Madrid's independent-shop streets.", "Toma Cafe", 8, "C. de la Palma, 49, 28004 Madrid, Spain", 40.4265, -3.7042),
+          templateActivity("Malasana and Conde Duque walk", "Walk", "Browse boutiques, record shops, and quiet plazas around Conde Duque without needing much transit.", "Malasana", 0, "Malasana, Madrid, Spain", 40.426, -3.7044),
+          templateActivity("Museo del Romanticismo", "Museum", "A compact museum that fits the neighborhood day and gives a different angle on Madrid history.", "Museo del Romanticismo", 5, "C. de San Mateo, 13, 28004 Madrid, Spain", 40.4258, -3.6987),
+          templateActivity("Cafe Central jazz evening", "Nightlife", "Check the set calendar and book ahead for a polished live-music night near Plaza de Santa Ana.", "Cafe Central", 25, "Pl. del Angel, 10, 28012 Madrid, Spain", 40.4144, -3.7018),
+        ],
+      },
+      {
+        title: "La Latina, Rastro, and sunset views",
+        summary: "Markets, tapas lanes, and sunset from the west side.",
+        theme: "Markets, tapas, viewpoints",
+        activities: [
+          templateActivity("El Rastro market", "Shopping", "Go Sunday morning if possible for Madrid's famous flea market; keep valuables secure in the crowds.", "El Rastro", 0, "Pl. de Cascorro, 28005 Madrid, Spain", 40.4079, -3.7073),
+          templateActivity("La Latina tapas crawl", "Food", "Use Cava Baja for a flexible tapas route with vermouth, pintxos, and small plates.", "Cava Baja", 28, "C. de la Cava Baja, 28005 Madrid, Spain", 40.4123, -3.7083),
+          templateActivity("Basilica de San Francisco el Grande", "Landmark", "A quieter landmark with a huge dome and strong interiors, close to La Latina.", "San Francisco el Grande", 5, "C. San Buenaventura, 1, 28005 Madrid, Spain", 40.4108, -3.7148),
+          templateActivity("Temple of Debod sunset", "Viewpoint", "Arrive before sunset for one of Madrid's best skyline viewpoints and a relaxed final evening.", "Temple of Debod", 0, "C. de Ferraz, 1, 28008 Madrid, Spain", 40.424, -3.7178),
         ],
       },
     ];
@@ -742,6 +792,13 @@ function nightlifeSeeds(destination: string) {
       templateActivity("Dizzy's Club at Jazz at Lincoln Center", "Nightlife", "Room with skyline views and ticketed jazz sets; verify showtimes before booking.", "Dizzy's Club", 45, "10 Columbus Cir, New York, NY 10019", 40.7681, -73.983),
     ];
   }
+  if (destination.toLowerCase().includes("madrid")) {
+    return [
+      templateActivity("Cafe Central jazz evening", "Nightlife", "Madrid jazz room near Plaza de Santa Ana; check the calendar and reserve seats before going.", "Cafe Central", 25, "Pl. del Angel, 10, 28012 Madrid, Spain", 40.4144, -3.7018),
+      templateActivity("Sala Clamores late show", "Nightlife", "Long-running live music venue north of Malasana; verify the night's genre and door time.", "Sala Clamores", 22, "C. de Alburquerque, 14, 28010 Madrid, Spain", 40.4301, -3.6997),
+      templateActivity("Cafe Berlin concert night", "Nightlife", "Central concert venue with jazz, flamenco, and Latin nights; ticketed shows vary by date.", "Cafe Berlin", 28, "Costanilla de los Angeles, 20, 28013 Madrid, Spain", 40.4192, -3.7078),
+    ];
+  }
   return [];
 }
 
@@ -763,6 +820,12 @@ function coffeeSeeds(destination: string) {
     return [
       templateActivity("Fahrenheit Coffee Richmond", "Cafe", "Independent espresso bar near the downtown route.", "Fahrenheit Coffee", 7, "120 Lombard St, Toronto, ON M5C 3H5", 43.6519, -79.3728),
       templateActivity("FIKA Cafe Kensington", "Cafe", "Local cafe that fits naturally into a Kensington day.", "FIKA Cafe", 8, "28 Kensington Ave, Toronto, ON M5T 2J9", 43.6548, -79.4005),
+    ];
+  }
+  if (destination.toLowerCase().includes("madrid")) {
+    return [
+      templateActivity("Toma Cafe Malasana", "Cafe", "Specialty coffee stop that fits naturally into a Malasana day.", "Toma Cafe", 8, "C. de la Palma, 49, 28004 Madrid, Spain", 40.4265, -3.7042),
+      templateActivity("Hola Coffee Lavapies", "Cafe", "Independent coffee near Lavapies and the museum triangle.", "Hola Coffee", 8, "C. del Dr. Fourquet, 33, 28012 Madrid, Spain", 40.4095, -3.6972),
     ];
   }
   return [];

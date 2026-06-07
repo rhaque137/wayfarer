@@ -43,9 +43,14 @@ export default function TripChatPage() {
   const lastQuery = useTripStore((s) => s.lastQuery);
   const updateTrip = useTripStore((s) => s.updateTrip);
   const setTrip = useTripStore((s) => s.setTrip);
+  const clearTrip = useTripStore((s) => s.clearTrip);
   const setLastQuery = useTripStore((s) => s.setLastQuery);
 
   const canCollapseMap = !(chatCollapsed && itineraryCollapsed);
+
+  useEffect(() => {
+    queueMicrotask(() => setWorkspaceNotice(null));
+  }, [routeTripId]);
 
   useEffect(() => {
     function onMove(e: MouseEvent) {
@@ -113,6 +118,9 @@ export default function TripChatPage() {
   useEffect(() => {
     if (!routeTripId) return;
     let cancelled = false;
+    if (trip && trip.id !== routeTripId) {
+      clearTrip();
+    }
     if (trip?.id === routeTripId && trip.days?.length) {
       setIsHydratingTrip(false);
       return () => {
@@ -199,7 +207,7 @@ export default function TripChatPage() {
     return () => {
       cancelled = true;
     };
-  }, [routeTripId, trip?.id, trip?.days?.length, queryPrompt, setTrip, setLastQuery, from]);
+  }, [routeTripId, trip?.id, trip?.days?.length, queryPrompt, setTrip, clearTrip, setLastQuery, from]);
 
   useEffect(() => {
     if (!routeTripId || !trip || trip.id !== routeTripId) return;
